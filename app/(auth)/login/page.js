@@ -50,6 +50,7 @@ export default function LoginPage() {
         // Set the access and refresh tokens in localStorage
         localStorage.setItem('access_token', data.access)
         localStorage.setItem('refresh_token', data.refresh)
+        localStorage.setItem('org_id', data.org_id)
 
         // Redirect to the dashboard using router.push
         router.push("/dashboard")

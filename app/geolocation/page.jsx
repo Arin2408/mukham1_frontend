@@ -11,8 +11,9 @@ import { useToast } from "hooks/use-toast";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 
-// Utility function to get access token from localStorage
+// Utility function to get access token and org_id from localStorage
 const getAccessToken = () => localStorage.getItem("access_token");
+const getOrgId = () => localStorage.getItem("org_id");
 
 // Token verification function
 const verifyToken = async (token, router, toast) => {
@@ -35,6 +36,7 @@ const verifyToken = async (token, router, toast) => {
         description: "Session expired. Please login again.",
       });
       localStorage.removeItem("access_token");
+      localStorage.removeItem("org_id");
       router.push("/login");
       return false;
     }
@@ -58,6 +60,7 @@ const verifyToken = async (token, router, toast) => {
       description: error.message,
     });
     localStorage.removeItem("access_token");
+    localStorage.removeItem("org_id");
     router.push("/login");
     return false;
   }
@@ -70,7 +73,7 @@ export default function MapPage() {
   const router = useRouter();
   const [locationData, setLocationData] = useState({
     location_name: "",
-    org: { id: "", name: "" },
+    org: { id: getOrgId(), name: "" },
     latitude: "",
     longitude: "",
   });
@@ -80,7 +83,7 @@ export default function MapPage() {
 
   // Fetch organization details on mount
   useEffect(() => {
-    const fetchOrganization = async () => {
+    const fetchOrganizationDetails = async () => {
       const token = getAccessToken();
       if (!token) {
         router.push("/login");
@@ -91,24 +94,21 @@ export default function MapPage() {
       if (!tokenValid) return;
 
       try {
-        const response = await fetch(
-          "http://127.0.0.1:8000/api/organisations/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const orgId = getOrgId();
+        const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        if (!response.ok) throw new Error("Failed to fetch organization");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || "Failed to fetch organization");
+        }
 
         const data = await response.json();
-
-        // Assuming the response is an array of organizations and we take the first one
-        if (data.length > 0) {
-          setLocationData((prev) => ({
-            ...prev,
-            org: { id: data[0].org_id, name: data[0].name } // Set the organization name from the first record
-          }));
-        }
+        setLocationData((prev) => ({
+          ...prev,
+          org: { id: getOrgId(), name: data.name },
+        }));
       } catch (error) {
         toast({
           variant: "destructive",
@@ -118,10 +118,10 @@ export default function MapPage() {
       }
     };
 
-    fetchOrganization();
+    fetchOrganizationDetails();
   }, [router, toast]);
 
-  // Map initialization (same as before)
+  // Map initialization
   useEffect(() => {
     let mapInstance;
     let L;
@@ -166,7 +166,7 @@ export default function MapPage() {
     };
   }, []);
 
-  // Search location (same as before)
+  // Search location
   const searchLocation = async () => {
     if (!locationData.location_name) return;
 
@@ -269,7 +269,7 @@ export default function MapPage() {
 
       setLocationData({
         location_name: "",
-        org: locationData.org.name , // Keep organization name
+        org: locationData.org,
         latitude: "",
         longitude: "",
       });
@@ -355,7 +355,7 @@ export default function MapPage() {
                 onChange={(e) =>
                   setLocationData((prev) => ({
                     ...prev,
-                    org: e.target.value,
+                    org: { ...prev.org, name: e.target.value },
                   }))
                 }
                 readOnly // Set this to readOnly since org is fetched automatically
@@ -389,12 +389,12 @@ export default function MapPage() {
           </Card>
         </div>
 
-        {submittedData && (
+        {/* {submittedData && (
           <Card className="p-6 mt-8">
             <h2 className="text-lg font-semibold mb-4">Submitted Data</h2>
             <pre>{JSON.stringify(submittedData, null, 2)}</pre>
           </Card>
-        )}
+        )} */}
       </div>
     </>
   );

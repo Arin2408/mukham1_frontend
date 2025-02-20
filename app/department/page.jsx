@@ -39,7 +39,9 @@ import { useRouter } from "next/navigation";
 import { Building2, MapPin, Pencil, Trash2 } from "lucide-react";
 
 const getAccessToken = () => localStorage.getItem("access_token");
+const getOrgId = () => localStorage.getItem("org_id");
 
+// Token verification function
 const verifyToken = async (token, router, toast) => {
   if (!token) {
     toast({
@@ -60,6 +62,7 @@ const verifyToken = async (token, router, toast) => {
         description: "Session expired. Please login again.",
       });
       localStorage.removeItem("access_token");
+      localStorage.removeItem("org_id");
       router.push("/login");
       return false;
     }
@@ -83,6 +86,7 @@ const verifyToken = async (token, router, toast) => {
       description: error.message,
     });
     localStorage.removeItem("access_token");
+    localStorage.removeItem("org_id");
     router.push("/login");
     return false;
   }
@@ -90,7 +94,7 @@ const verifyToken = async (token, router, toast) => {
 
 export default function DepartmentPage() {
   const [formData, setFormData] = useState({
-    org: { id: "", name: "" },
+    org: { id: getOrgId(), name: "" },
     details: "",
     location: { id: "", name: "" },
   });
@@ -137,25 +141,26 @@ export default function DepartmentPage() {
       router.push("/login");
       return;
     }
-
+  
     const tokenValid = await verifyToken(token, router, toast);
     if (!tokenValid) return;
-
+  
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/organisations/", {
+      const orgId = getOrgId();
+      const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+  
       if (!response.ok) throw new Error("Failed to fetch organizations");
-
+  
       const data = await response.json();
-      setOrganizations(data);
-      if (data.length > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          org: { id: data[0].org_id.toString(), name: data[0].name },
-        }));
-      }
+      setOrganizations([data]); // Assuming the response is a single organization object
+  
+      // Set the organization name in the formData state
+      setFormData((prev) => ({
+        ...prev,
+        org: { id: orgId, name: data.name }, // Assuming the organization object has a `name` field
+      }));
     } catch (error) {
       toast({
         variant: "destructive",
@@ -263,7 +268,7 @@ export default function DepartmentPage() {
       });
 
       setFormData({
-        org: { id: "", name: "" },
+        org: { id: getOrgId(), name: "" },
         details: "",
         location: { id: "", name: "" },
       });
@@ -390,26 +395,13 @@ export default function DepartmentPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Organization</label>
-                <Select
-                  value={formData.org.id}
-                  onValueChange={(value) =>
-                    handleInputChange("org", {
-                      id: value,
-                      name: organizations.find((org) => org.org_id.toString() === value)?.name || "",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select organization" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.org_id} value={org.org_id.toString()}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                 required
+                 readOnly
+                 placeholder="Enter organization name"
+                 value={formData.org.name}
+                 onChange={(e) => handleInputChange("org", { id: getOrgId(), name: e.target.value })}
+                />
               </div>
 
               <div className="space-y-2">
@@ -451,7 +443,7 @@ export default function DepartmentPage() {
             </form>
           </Card>
 
-          <Card className="p-6">
+          {/* <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">Departments List</h2>
             <div className="space-y-4">
               {departments.length === 0 ? (
@@ -465,7 +457,7 @@ export default function DepartmentPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Building2 className="w-4 h-4" />
-                            <span>{organizations.find(org => org.org_id.toString() === dept.org.toString())?.name || 'Unknown Organization'}</span>
+                            <span>{organizations.find(org => org.getOrgId().toString() === dept.org.toString())?.name || 'Unknown Organization'}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
@@ -506,7 +498,7 @@ export default function DepartmentPage() {
                                   onValueChange={(value) =>
                                     handleInputChange("org", {
                                       id: value,
-                                      name: organizations.find((org) => org.org_id.toString() === value)?.name || "",
+                                      name: organizations.find((org) => org.id.toString() === value)?.name || "",
                                     })
                                   }
                                 >
@@ -515,7 +507,7 @@ export default function DepartmentPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     {organizations.map((org) => (
-                                      <SelectItem key={org.org_id} value={org.org_id.toString()}>
+                                      <SelectItem key={org.id} value={org.id.toString()}>
                                         {org.name}
                                       </SelectItem>
                                     ))}
@@ -600,7 +592,7 @@ export default function DepartmentPage() {
                 ))
               )}
             </div>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </>

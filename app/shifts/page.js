@@ -26,16 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, ArrowLeft, Pencil, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { jwtDecode } from "jwt-decode";
 
 const getAccessToken = () => localStorage.getItem("access_token");
+const getOrgId = () => localStorage.getItem("org_id");
 
-// Token verification function
 const verifyToken = async (token, router, toast) => {
   if (!token) {
     toast({
@@ -97,73 +97,98 @@ export default function ShiftsPage() {
     shift_start_time: "",
     shift_end_time: "",
     department: { id: "", name: "" },
+    org_id: getOrgId(),
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Token verification and fetching departments when the page loads
   useEffect(() => {
     const token = getAccessToken();
     verifyToken(token, router, toast);
-
-    // Fetch departments from the backend
     fetchDepartments();
+    fetchShifts();
   }, [router, toast]);
 
-  
-
-const fetchDepartments = async () => {
-  try {
+  const fetchDepartments = useCallback(async () => {
     const token = getAccessToken();
-    const response = await fetch("http://127.0.0.1:8000/api/departments/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    if (!token) return;
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch departments");
+    try {
+      const orgId = getOrgId();
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/departments/?org_id=${orgId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch departments");
+
+      const data = await response.json();
+      setDepartments(data);
+
+      if (data.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          department: { 
+            id: data[0].department_id, 
+            name: data[0].details 
+          },
+        }));
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
+  }, [toast]);
 
-    const data = await response.json();
-    setDepartments(data);
+  const fetchShifts = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
 
-    if (data.length > 0) {
-      // Set the first department in the dropdown as the default
-      setFormData((prev) => ({
-        ...prev,
-        department: { id: data[0].department_id, name: data[0].details },
-      }));
+    try {
+      const orgId = getOrgId();
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/shifts/?org_id=${orgId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch shifts");
+
+      const data = await response.json();
+      setShifts(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-  }
-};
+  }, [toast]);
 
-  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleDepartmentChange = (value) => {
-  const selectedDepartment = departments.find((dept) => dept.department_id === value);
-  if (selectedDepartment) {
-    setFormData((prev) => ({
-      ...prev,
-      department: {
-        id: selectedDepartment.department_id,
-        name: selectedDepartment.details,
-      },
-    }));
-  }
-};
-
+    const selectedDepartment = departments.find(
+      dept => dept.department_id.toString() === value
+    );
+    if (selectedDepartment) {
+      setFormData(prev => ({
+        ...prev,
+        department: {
+          id: selectedDepartment.department_id,
+          name: selectedDepartment.details,
+        },
+      }));
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -171,6 +196,7 @@ const fetchDepartments = async () => {
       shift_start_time: "",
       shift_end_time: "",
       department: { id: "", name: "" },
+      org_id: getOrgId(),
     });
     setCurrentShift(null);
     setIsEditMode(false);
@@ -182,7 +208,11 @@ const fetchDepartments = async () => {
         shift_name: shift.shift_name,
         shift_start_time: shift.shift_start_time,
         shift_end_time: shift.shift_end_time,
-        department: shift.department,
+        department: {
+          id: shift.department.toString(),
+          name: departments.find(d => d.department_id === shift.department)?.details || ""
+        },
+        org_id: shift.org_id,
       });
       setCurrentShift(shift);
       setIsEditMode(true);
@@ -192,164 +222,85 @@ const fetchDepartments = async () => {
     setIsOpen(true);
   };
 
-
-  // fetching
-  const fetchShifts = async () => {
-  try {
+  const handleShiftSubmit = async (e) => {
+    e.preventDefault();
     const token = getAccessToken();
-    const response = await fetch("http://127.0.0.1:8000/api/shifts/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    if (!token || !(await verifyToken(token, router, toast))) return;
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch shifts");
+    setIsLoading(true);
+    try {
+      const shiftData = {
+        shift_name: formData.shift_name,
+        shift_start_time: formData.shift_start_time,
+        shift_end_time: formData.shift_end_time,
+        department: formData.department.id,
+        org_id: formData.org_id,
+      };
+
+      const url = isEditMode
+        ? `http://127.0.0.1:8000/api/shifts/update/${currentShift.shift_id}/`
+        : "http://127.0.0.1:8000/api/shifts/add/";
+
+      const response = await fetch(url, {
+        method: isEditMode ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(shiftData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Failed to ${isEditMode ? "update" : "create"} shift`);
+      }
+
+      toast({
+        title: "Success",
+        description: `Shift ${isEditMode ? "updated" : "created"} successfully.`,
+      });
+
+      setIsOpen(false);
+      resetForm();
+      fetchShifts();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    const data = await response.json();
-    setShifts(data);
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-  }
-};
-
-useEffect(() => {
-  const token = getAccessToken();
-  verifyToken(token, router, toast);
-  fetchShifts(); // Fetch shifts on page load
-}, [router, toast]);
-
-
-// handle submit
-const handleShiftSubmit = async (e) => {
-  e.preventDefault();
-  const shiftData = {
-    shift_name: formData.shift_name,
-    shift_start_time: formData.shift_start_time,
-    shift_end_time: formData.shift_end_time,
-    department: formData.department.id,
   };
 
-  try {
-    const token = getAccessToken();
-    const response = await fetch("http://127.0.0.1:8000/api/add-shift/", {
-      method: isEditMode ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(shiftData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to ${isEditMode ? "update" : "create"} the shift`);
-    }
-
-    toast({
-      title: isEditMode ? "Shift Updated" : "Shift Created",
-      description: `${shiftData.shift_name} has been successfully ${isEditMode ? "updated" : "created"}.`,
-    });
-
-    setIsOpen(false);
-    resetForm();
-    fetchShifts(); // Refresh the shifts list
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-  }
-};
-
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   const shiftData = {
-  //     shift_name: formData.shift_name,
-  //     shift_start_time: formData.shift_start_time,
-  //     shift_end_time: formData.shift_end_time,
-  //     department: formData.department.id,
-  //   };
-
-  //   try {
-  //     const token = getAccessToken();
-  //     const response = await fetch("http://127.0.0.1:8000/api/add-shift/", {
-  //       method: isEditMode ? "PUT" : "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       body: JSON.stringify(shiftData),
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error(
-  //         `Failed to ${isEditMode ? "update" : "create"} the shift`
-  //       );
-  //     }
-
-  //     const newShift = await response.json();
-
-  //     if (isEditMode && currentShift) {
-  //       setShifts(
-  //         shifts.map((shift) =>
-  //           shift.id === currentShift.id ? { ...newShift } : shift
-  //         )
-  //       );
-  //       toast({
-  //         title: "Shift Updated",
-  //         description: `${newShift.shift_name} has been updated successfully.`,
-  //       });
-  //     } else {
-  //       setShifts([...shifts, newShift]);
-  //       toast({
-  //         title: "Shift Created",
-  //         description: `${newShift.shift_name} has been created successfully.`,
-  //       });
-  //     }
-
-  //     setIsOpen(false);
-  //     resetForm();
-  //   } catch (error) {
-  //     toast({
-  //       variant: "destructive",
-  //       title: "Error",
-  //       description: error.message,
-  //     });
-  //   }
-  // };
-
   const handleDelete = async (shiftId) => {
+    if (!confirm("Are you sure you want to delete this shift?")) return;
+    
+    const token = getAccessToken();
+    if (!token || !(await verifyToken(token, router, toast))) return;
+
     try {
-      if (confirm("Are you sure you want to delete this shift?")) {
-        const token = getAccessToken();
-        const response = await fetch(
-          `http://127.0.0.1:8000/api/shifts/${shiftId}/`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to delete the shift");
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/shifts/delete/${shiftId}/`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
         }
+      );
 
-        setShifts(shifts.filter((shift) => shift.id !== shiftId));
-        toast({
-          title: "Shift Deleted",
-          description: "The shift has been deleted successfully.",
-          variant: "destructive",
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to delete shift");
       }
+
+      toast({
+        title: "Shift Deleted",
+        description: "Shift deleted successfully.",
+        variant: "destructive",
+      });
+      
+      fetchShifts();
     } catch (error) {
       toast({
         variant: "destructive",
@@ -400,7 +351,6 @@ const handleShiftSubmit = async (e) => {
                         type="time"
                         value={formData.shift_start_time}
                         onChange={handleInputChange}
-                        placeholder="Start Time e.g., 09:00 AM"
                         required
                       />
                     </div>
@@ -412,31 +362,36 @@ const handleShiftSubmit = async (e) => {
                         type="time"
                         value={formData.shift_end_time}
                         onChange={handleInputChange}
-                        placeholder="End Time e.g., 05:00 PM"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="department">Department</Label>
-                    <Select value={formData.department.id} onValueChange={handleDepartmentChange}>
-  <SelectTrigger>
-    <SelectValue placeholder="Select department">
-      {formData.department.name || "Select department"}
-    </SelectValue>
-  </SelectTrigger>
-  <SelectContent>
-    {departments.map((department) => (
-      <SelectItem key={department.department_id} value={department.department_id}>
-        {department.details}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-
+                    <Select
+                      value={formData.department.id.toString()}
+                      onValueChange={handleDepartmentChange}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department">
+                          {formData.department.name || "Select department"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((department) => (
+                          <SelectItem
+                            key={department.department_id}
+                            value={department.department_id.toString()}
+                          >
+                            {department.details}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button type="submit">
-                    {isEditMode ? "Update Shift" : "Create Shift"}
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Processing..." : isEditMode ? "Update Shift" : "Create Shift"}
                   </Button>
                 </form>
               </DialogContent>
@@ -457,11 +412,13 @@ const handleShiftSubmit = async (e) => {
             </TableHeader>
             <TableBody>
               {shifts.map((shift) => (
-                <TableRow key={shift.id}>
+                <TableRow key={shift.shift_id}>
                   <TableCell>{shift.shift_name}</TableCell>
                   <TableCell>{shift.shift_start_time}</TableCell>
                   <TableCell>{shift.shift_end_time}</TableCell>
-                  <TableCell>{shift.department?.name || "N/A"}</TableCell>
+                  <TableCell>
+                    {departments.find(d => d.department_id === shift.department)?.details || "N/A"}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
                       <Button
@@ -472,7 +429,7 @@ const handleShiftSubmit = async (e) => {
                       </Button>
                       <Button
                         variant="destructive"
-                        onClick={() => handleDelete(shift.id)}
+                        onClick={() => handleDelete(shift.shift_id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

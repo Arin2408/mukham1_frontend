@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const getAccessToken = () => localStorage.getItem("access_token");
+const getOrgId = () => localStorage.getItem("org_id");
 
 const verifyToken = async (token, setTokenStatus, router) => {
   if (!token) {
@@ -67,27 +68,25 @@ export default function ProfilePage() {
   const [tokenStatus, setTokenStatus] = useState("");
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  const fetchOrganisationDetails = async (token) => {
+  const fetchOrganisationDetails = async (token, orgId) => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/organisations/", {
+      const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Failed to fetch organization");
       }
-      
-      const data = await response.json();
-      // Check if data is an array and take the first item
-      const orgData = Array.isArray(data) ? data[0] : data;
-      
+
+      const orgData = await response.json();
+
       const formattedData = {
-        name: orgData?.name || "",
-        email: orgData?.email || "",
-        details: orgData?.details || ""
+        name: orgData.name || "",
+        email: orgData.email || "",
+        details: orgData.details || "",
       };
-      
+
       setDisplayedOrganisation(formattedData);
       setFormData({ ...formattedData, modified: false });
     } catch (error) {
@@ -99,10 +98,10 @@ export default function ProfilePage() {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
-      modified: true
+      modified: true,
     }));
   };
 
@@ -119,7 +118,7 @@ export default function ProfilePage() {
     setSuccessMessage("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/organisations/update/", {
+      const response = await fetch(`http://127.0.0.1:8000/api/profile/${getOrgId()}/`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -128,7 +127,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          details: formData.details
+          details: formData.details,
         }),
       });
 
@@ -138,18 +137,18 @@ export default function ProfilePage() {
       }
 
       const updatedData = await response.json();
-      
+
       setDisplayedOrganisation({
         name: updatedData.name,
         email: updatedData.email,
-        details: updatedData.details
+        details: updatedData.details,
       });
-      
+
       setFormData({
         name: updatedData.name,
         email: updatedData.email,
         details: updatedData.details,
-        modified: false
+        modified: false,
       });
 
       setSuccessMessage("Profile updated successfully!");
@@ -177,7 +176,12 @@ export default function ProfilePage() {
 
       const isValid = await verifyToken(token, setTokenStatus, router);
       if (isValid) {
-        await fetchOrganisationDetails(token);
+        const orgId = getOrgId();
+        if (orgId) {
+          await fetchOrganisationDetails(token, orgId);
+        } else {
+          setErrorMessage("Organization ID not found.");
+        }
       } else {
         setIsLoading(false);
       }

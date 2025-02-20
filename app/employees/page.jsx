@@ -1,21 +1,76 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useCallback } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { UserPlus, Users, Download, FileDown } from "lucide-react"
-import { Header } from '@/components/Header'
+} from "@/components/ui/select";
+import { UserPlus, Users, FileDown } from "lucide-react";
+import { Header } from '@/components/Header';
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
+
+const getAccessToken = () => localStorage.getItem("access_token");
+const getOrgId = () => localStorage.getItem("org_id");
+
+const verifyToken = async (token, router, toast) => {
+  if (!token) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "No token found. Please login again.",
+    });
+    router.push("/login");
+    return false;
+  }
+
+  try {
+    const decodedToken = jwtDecode(token);
+    if (Date.now() >= decodedToken.exp * 1000) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Session expired. Please login again.",
+      });
+      localStorage.removeItem("access_token");
+      router.push("/login");
+      return false;
+    }
+
+    const response = await fetch("http://127.0.0.1:8000/api/token/verify/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Invalid token");
+    }
+
+    return true;
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: error.message,
+    });
+    localStorage.removeItem("access_token");
+    router.push("/login");
+    return false;
+  }
+};
 
 export default function EmployeePage() {
-  // ... [Previous state declarations remain the same] ...
+  const router = useRouter();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     mobile_number: "",
     first_name: "",
@@ -24,134 +79,151 @@ export default function EmployeePage() {
     department: "",
     designation: "",
     shift: "",
-    office_location: ""
-  })
+    office_location: "",
+    organisation: getOrgId(),
+    org_id: getOrgId(),
+  });
 
-  const [departments] = useState([
-    { id: 1, name: "IT" },
-    { id: 2, name: "HR" },
-    { id: 3, name: "Finance" }
-  ])
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [exportFormat, setExportFormat] = useState("csv");
 
-  const [designations] = useState([
-    { id: 1, name: "Software Engineer" },
-    { id: 2, name: "Manager" },
-    { id: 3, name: "Director" }
-  ])
+  useEffect(() => {
+    const token = getAccessToken();
+    verifyToken(token, router, toast).then(isValid => {
+      if (isValid) {
+        fetchOrganization();
+        fetchMasterData();
+        fetchEmployees();
+      }
+    });
+  }, [router, toast]);
 
-  const [shifts] = useState([
-    { id: 1, name: "Morning Shift" },
-    { id: 2, name: "Afternoon Shift" },
-    { id: 3, name: "Night Shift" }
-  ])
+  const fetchOrganization = useCallback(async () => {
+    const token = getAccessToken();
+    const orgId = getOrgId();
+    if (!token || !orgId) return;
 
-  const [locations] = useState([
-    { id: 1, name: "Headquarters" },
-    { id: 2, name: "Branch Office" },
-    { id: 3, name: "Remote" }
-  ])
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-  const [employees, setEmployees] = useState([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [exportFormat, setExportFormat] = useState("csv")
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizationName(data.name);
+      }
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+    }
+  }, []);
+
+  const fetchMasterData = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      const orgId = getOrgId();
+      const [deptRes, desigRes, shiftRes, locRes] = await Promise.all([
+        fetch(`http://127.0.0.1:8000/api/departments/?org_id=${orgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://127.0.0.1:8000/api/designations/?org_id=${orgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://127.0.0.1:8000/api/shifts/?org_id=${orgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://127.0.0.1:8000/api/locations/?org_id=${orgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const [depts, designations, shifts, locations] = await Promise.all([
+        deptRes.json(),
+        desigRes.json(),
+        shiftRes.json(),
+        locRes.json(),
+      ]);
+
+      setDepartments(depts);
+      setDesignations(designations);
+      setShifts(shifts);
+      setLocations(locations);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  }, [toast]);
+
+  const fetchEmployees = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      const orgId = getOrgId();
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/list/?org_id=${orgId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (!response.ok) throw new Error("Failed to fetch employees");
+      const data = await response.json();
+      setEmployees(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  }, [toast]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-  const exportToCSV = (data) => {
-    const headers = [
-      "First Name",
-      "Last Name",
-      "Mobile Number",
-      "Email",
-      "Department",
-      "Designation",
-      "Shift",
-      "Office Location"
-    ]
-
-    const csvRows = [
-      headers.join(','),
-      ...data.map(employee => [
-        employee.first_name,
-        employee.last_name,
-        employee.mobile_number,
-        employee.email,
-        departments.find(d => d.id.toString() === employee.department)?.name || '',
-        designations.find(d => d.id.toString() === employee.designation)?.name || '',
-        shifts.find(s => s.id.toString() === employee.shift)?.name || '',
-        locations.find(l => l.id.toString() === employee.office_location)?.name || ''
-      ].join(','))
-    ].join('\n')
-
-    return csvRows
-  }
-
-  const exportToJSON = (data) => {
-    const formattedData = data.map(employee => ({
-      first_name: employee.first_name,
-      last_name: employee.last_name,
-      mobile_number: employee.mobile_number,
-      email: employee.email,
-      department: departments.find(d => d.id.toString() === employee.department)?.name || '',
-      designation: designations.find(d => d.id.toString() === employee.designation)?.name || '',
-      shift: shifts.find(s => s.id.toString() === employee.shift)?.name || '',
-      office_location: locations.find(l => l.id.toString() === employee.office_location)?.name || ''
-    }))
-
-    return JSON.stringify(formattedData, null, 2)
-  }
-
-  const handleExport = () => {
-    let content
-    let filename
-    let type
-
-    if (exportFormat === "csv") {
-      content = exportToCSV(employees)
-      filename = "employees.csv"
-      type = "text/csv"
-    } else {
-      content = exportToJSON(employees)
-      filename = "employees.json"
-      type = "application/json"
-    }
-
-    const blob = new Blob([content], { type })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // ... [Previous handleSubmit function remains the same] ...
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+    e.preventDefault();
+    const token = getAccessToken();
+    if (!token || !(await verifyToken(token, router, toast))) return;
+
+    setIsSubmitting(true);
 
     try {
       if (!/^\d{10}$/.test(formData.mobile_number)) {
-        alert("Please enter a valid 10-digit mobile number")
-        return
+        throw new Error("Please enter a valid 10-digit mobile number");
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        alert("Please enter a valid email address")
-        return
+        throw new Error("Please enter a valid email address");
       }
 
-      const newEmployee = {
-        id: Date.now(),
-        ...formData
+      const response = await fetch("http://127.0.0.1:8000/api/signup/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to add employee");
       }
-      setEmployees(prev => [...prev, newEmployee])
+
+      toast({
+        title: "Success",
+        description: "Employee added successfully!",
+      });
 
       setFormData({
         mobile_number: "",
@@ -161,17 +233,74 @@ export default function EmployeePage() {
         department: "",
         designation: "",
         shift: "",
-        office_location: ""
-      })
+        office_location: "",
+        org_id: getOrgId(),
+      });
 
-      alert("Employee added successfully!")
+      fetchEmployees();
     } catch (error) {
-      console.error("Error adding employee:", error)
-      alert("Error adding employee. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
+
+  const exportToCSV = (data) => {
+    const headers = [
+      "First Name", "Last Name", "Mobile Number", "Email",
+      "Department", "Designation", "Shift", "Location"
+    ].join(',');
+
+    const rows = data.map(employee => [
+      employee.first_name,
+      employee.last_name,
+      employee.mobile_number,
+      employee.email,
+      departments.find(d => d.department_id.toString() === employee.department)?.details || '',
+      designations.find(d => d.designation_id.toString() === employee.designation)?.details || '',
+      shifts.find(s => s.shift_id.toString() === employee.shift)?.shift_name || '',
+      locations.find(l => l.location_id.toString() === employee.office_location)?.location_name || ''
+    ].join(','));
+
+    return [headers, ...rows].join('\n');
+  };
+
+  const exportToJSON = (data) => {
+    return JSON.stringify(data.map(employee => ({
+      ...employee,
+      department: departments.find(d => d.department_id.toString() === employee.department)?.details || '',
+      designation: designations.find(d => d.designation_id.toString() === employee.designation)?.details || '',
+      shift: shifts.find(s => s.shift_id.toString() === employee.shift)?.shift_name || '',
+      office_location: locations.find(l => l.location_id.toString() === employee.office_location)?.location_name || ''
+    }), null, 2));
+  };
+
+  const handleExport = () => {
+    let content, filename, type;
+    
+    if (exportFormat === "csv") {
+      content = exportToCSV(employees);
+      filename = "employees.csv";
+      type = "text/csv";
+    } else {
+      content = exportToJSON(employees);
+      filename = "employees.json";
+      type = "application/json";
+    }
+
+    const blob = new Blob([content], { type });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <>
@@ -181,10 +310,7 @@ export default function EmployeePage() {
           <h1 className="text-3xl font-bold">Employee Management</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Select
-                value={exportFormat}
-                onValueChange={setExportFormat}
-              >
+              <Select value={exportFormat} onValueChange={setExportFormat}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Export as..." />
                 </SelectTrigger>
@@ -209,12 +335,10 @@ export default function EmployeePage() {
           </div>
         </div>
 
-        {/* ... [Rest of the component remains the same] ... */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">Add New Employee</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* ... [Form fields remain the same] ... */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">First Name</label>
@@ -271,8 +395,11 @@ export default function EmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          {dept.name}
+                        <SelectItem 
+                          key={dept.department_id} 
+                          value={dept.department_id.toString()}
+                        >
+                          {dept.details}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -290,8 +417,11 @@ export default function EmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {designations.map((desig) => (
-                        <SelectItem key={desig.id} value={desig.id.toString()}>
-                          {desig.name}
+                        <SelectItem 
+                          key={desig.designation_id} 
+                          value={desig.designation_id.toString()}
+                        >
+                          {desig.details}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -312,8 +442,11 @@ export default function EmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {shifts.map((shift) => (
-                        <SelectItem key={shift.id} value={shift.id.toString()}>
-                          {shift.name}
+                        <SelectItem 
+                          key={shift.shift_id} 
+                          value={shift.shift_id.toString()}
+                        >
+                          {shift.shift_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -331,8 +464,11 @@ export default function EmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id.toString()}>
-                          {loc.name}
+                        <SelectItem 
+                          key={loc.location_id} 
+                          value={loc.location_id.toString()}
+                        >
+                          {loc.location_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -356,7 +492,7 @@ export default function EmployeePage() {
                 </p>
               ) : (
                 employees.slice(-5).map((employee) => (
-                  <Card key={employee.id} className="p-4">
+                  <Card key={employee.employee_id} className="p-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <span className="text-muted-foreground">Name:</span>
                       <span>{`${employee.first_name} ${employee.last_name}`}</span>
@@ -365,7 +501,9 @@ export default function EmployeePage() {
                       <span className="text-muted-foreground">Email:</span>
                       <span>{employee.email}</span>
                       <span className="text-muted-foreground">Department:</span>
-                      <span>{departments.find(d => d.id.toString() === employee.department)?.name}</span>
+                      <span>
+                        {departments.find(d => d.department_id.toString() === employee.department)?.details}
+                      </span>
                     </div>
                   </Card>
                 ))
@@ -375,5 +513,5 @@ export default function EmployeePage() {
         </div>
       </div>
     </>
-  )
+  );
 }
