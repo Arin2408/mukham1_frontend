@@ -239,7 +239,7 @@ export default function ShiftsPage() {
 
       const url = isEditMode
         ? `http://127.0.0.1:8000/api/shifts/update/${currentShift.shift_id}/`
-        : "http://127.0.0.1:8000/api/shifts/add/";
+        : "http://127.0.0.1:8000/api/add-shift/";
 
       const response = await fetch(url, {
         method: isEditMode ? "PUT" : "POST",

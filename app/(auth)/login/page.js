@@ -15,6 +15,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useToast } from "hooks/use-toast.ts"
+import PhoneInput from "react-phone-input-2"
+import "react-phone-input-2/lib/style.css"
+
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,6 +27,14 @@ export default function LoginPage() {
     mobile_number: "",
     password: ""
   })
+
+  const handlePhoneChange = (value) => {
+  setFormData((prev) => ({
+    ...prev,
+    mobile_number: value,
+  }));
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -50,7 +61,6 @@ export default function LoginPage() {
         // Set the access and refresh tokens in localStorage
         localStorage.setItem('access_token', data.access)
         localStorage.setItem('refresh_token', data.refresh)
-        localStorage.setItem('org_id', data.org_id)
 
         // Redirect to the dashboard using router.push
         router.push("/dashboard")
@@ -96,19 +106,24 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mobile_number">Mobile Number</Label>
-              <Input 
-                id="mobile_number" 
-                type="tel" 
-                placeholder="Enter your mobile number"
-                value={formData.mobile_number}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-            </div>
+  <Label htmlFor="mobile_number">Phone Number</Label>
+  <PhoneInput
+    country={"in"} // Default to India
+    value={formData.mobile_number}
+    onChange={handlePhoneChange} // Calls handlePhoneChange when phone input changes
+    inputProps={{
+      name: "mobile_number",
+      required: true,
+      autoFocus: false,
+    }}
+    enableSearch={true} // Allow country search
+    countryCodeEditable={false} // Prevent manual change of country code
+  />
+</div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input 
+                Label='password'
                 id="password" 
                 type="password"
                 value={formData.password}

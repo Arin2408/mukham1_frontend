@@ -16,6 +16,8 @@ import { Header } from '@/components/Header';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
+import PhoneInput from "react-phone-input-2"
+import "react-phone-input-2/lib/style.css"
 
 const getAccessToken = () => localStorage.getItem("access_token");
 const getOrgId = () => localStorage.getItem("org_id");
@@ -302,6 +304,13 @@ export default function EmployeePage() {
     document.body.removeChild(link);
   };
 
+  const handlePhoneChange = (value) => {
+  setFormData((prev) => ({
+    ...prev,
+    mobile_number: value,
+  }));
+};
+
   return (
     <>
       <Header />
@@ -361,15 +370,20 @@ export default function EmployeePage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Mobile Number</label>
-                <Input
-                  required
-                  value={formData.mobile_number}
-                  onChange={(e) => handleInputChange("mobile_number", e.target.value)}
-                  placeholder="Enter 10-digit mobile number"
-                  maxLength={10}
-                />
-              </div>
+  <label htmlFor="mobile_number">Phone Number</label>
+  <PhoneInput
+    country={"in"} // Default to India
+    value={formData.mobile_number}
+    onChange={handlePhoneChange} // Calls handlePhoneChange when phone input changes
+    inputProps={{
+      name: "mobile_number",
+      required: true,
+      autoFocus: false,
+    }}
+    enableSearch={true} // Allow country search
+    countryCodeEditable={false} // Prevent manual change of country code
+  />
+</div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
