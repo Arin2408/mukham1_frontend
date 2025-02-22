@@ -443,7 +443,7 @@ export default function DepartmentPage() {
             </form>
           </Card>
 
-          {/* <Card className="p-6">
+          <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">Departments List</h2>
             <div className="space-y-4">
               {departments.length === 0 ? (
@@ -457,7 +457,7 @@ export default function DepartmentPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Building2 className="w-4 h-4" />
-                            <span>{organizations.find(org => org.getOrgId().toString() === dept.org.toString())?.name || 'Unknown Organization'}</span>
+                            <span>{organizations.find(org => getOrgId().toString() === dept.org.toString())?.name || 'Unknown Organization'}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
@@ -475,7 +475,7 @@ export default function DepartmentPage() {
                                 ...dept,
                                 org: {
                                   id: dept.org.toString(),
-                                  name: organizations.find(org => org.org_id.toString() === dept.org.toString())?.name
+                                  name: organizations.find(org => getOrgId.toString() === dept.org.toString())?.name
                                 },
                                 location: {
                                   id: dept.location.toString(),
@@ -498,7 +498,7 @@ export default function DepartmentPage() {
                                   onValueChange={(value) =>
                                     handleInputChange("org", {
                                       id: value,
-                                      name: organizations.find((org) => org.id.toString() === value)?.name || "",
+                                      name: organizations.find((org) => getOrgId.toString() === value)?.name || "",
                                     })
                                   }
                                 >
@@ -507,7 +507,7 @@ export default function DepartmentPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     {organizations.map((org) => (
-                                      <SelectItem key={org.id} value={org.id.toString()}>
+                                      <SelectItem key={getOrgId()} value={getOrgId().toString()}>
                                         {org.name}
                                       </SelectItem>
                                     ))}
@@ -592,7 +592,7 @@ export default function DepartmentPage() {
                 ))
               )}
             </div>
-          </Card> */}
+          </Card>
         </div>
       </div>
     </>
