@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
+import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -16,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,110 +31,94 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { jwtDecode } from "jwt-decode";
-
-const getAccessToken = () => localStorage.getItem("access_token");
-const getOrgId = () => localStorage.getItem("org_id");
-
-const verifyToken = async (token, router, toast) => {
-  if (!token) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "No token found. Please login again.",
-    });
-    router.push("/login");
-    return false;
-  }
-
-  try {
-    const decodedToken = jwtDecode(token);
-    if (Date.now() >= decodedToken.exp * 1000) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Session expired. Please login again.",
-      });
-      localStorage.removeItem("access_token");
-      router.push("/login");
-      return false;
-    }
-
-    const response = await fetch("http://127.0.0.1:8000/api/token/verify/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Invalid token");
-    }
-
-    return true;
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-    localStorage.removeItem("access_token");
-    router.push("/login");
-    return false;
-  }
-};
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ShiftsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { orgId } = useAuth(); // Get orgId from AuthContext
+  
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [formData, setFormData] = useState({
     shift_name: "",
     shift_start_time: "",
     shift_end_time: "",
     department: { id: "", name: "" },
-    org_id: getOrgId(),
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const token = getAccessToken();
-    verifyToken(token, router, toast);
-    fetchDepartments();
-    fetchShifts();
-  }, [router, toast]);
-
-  const fetchDepartments = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) return;
+  // Helper function to verify token and handle authentication issues
+  const verifyToken = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No token found. Please login again.",
+      });
+      router.push("/login");
+      return false;
+    }
 
     try {
-      const orgId = getOrgId();
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/departments/?org_id=${orgId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const decodedToken = jwtDecode(token);
+      if (Date.now() >= decodedToken.exp * 1000) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Session expired. Please login again.",
+        });
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("org_id");
+        router.push("/login");
+        return false;
+      }
 
-      if (!response.ok) throw new Error("Failed to fetch departments");
+      // Use AxiosPost from AuthContext
+      await AxiosPost("token/verify/", { token });
+      return true;
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Invalid token",
+      });
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("org_id");
+      router.push("/login");
+      return false;
+    }
+  };
 
-      const data = await response.json();
+  const fetchDepartments = useCallback(async () => {
+    if (!(await verifyToken())) return;
+
+    try {
+      const data = await AxiosGet("departments/");
       setDepartments(data);
 
       if (data.length > 0) {
         setFormData(prev => ({
           ...prev,
           department: { 
-            id: data[0].department_id, 
+            id: data[0].department_id.toString(), 
             name: data[0].details 
           },
         }));
@@ -139,36 +127,30 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.detail || "Failed to fetch departments",
       });
     }
-  }, [toast]);
+  }, [router, toast]);
 
   const fetchShifts = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) return;
+    if (!(await verifyToken())) return;
 
     try {
-      const orgId = getOrgId();
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/shifts/?org_id=${orgId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch shifts");
-
-      const data = await response.json();
+      const data = await AxiosGet("shifts/");
       setShifts(data);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.detail || "Failed to fetch shifts",
       });
     }
-  }, [toast]);
+  }, [router, toast]);
+
+  useEffect(() => {
+    fetchDepartments();
+    fetchShifts();
+  }, [fetchDepartments, fetchShifts]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -183,7 +165,7 @@ export default function ShiftsPage() {
       setFormData(prev => ({
         ...prev,
         department: {
-          id: selectedDepartment.department_id,
+          id: selectedDepartment.department_id.toString(),
           name: selectedDepartment.details,
         },
       }));
@@ -195,11 +177,12 @@ export default function ShiftsPage() {
       shift_name: "",
       shift_start_time: "",
       shift_end_time: "",
-      department: { id: "", name: "" },
-      org_id: getOrgId(),
+      department: { 
+        id: departments.length > 0 ? departments[0].department_id.toString() : "",
+        name: departments.length > 0 ? departments[0].details : ""
+      },
     });
     setCurrentShift(null);
-    setIsEditMode(false);
   };
 
   const handleOpenDialog = (shift = null) => {
@@ -212,10 +195,8 @@ export default function ShiftsPage() {
           id: shift.department.toString(),
           name: departments.find(d => d.department_id === shift.department)?.details || ""
         },
-        org_id: shift.org_id,
       });
       setCurrentShift(shift);
-      setIsEditMode(true);
     } else {
       resetForm();
     }
@@ -224,8 +205,7 @@ export default function ShiftsPage() {
 
   const handleShiftSubmit = async (e) => {
     e.preventDefault();
-    const token = getAccessToken();
-    if (!token || !(await verifyToken(token, router, toast))) return;
+    if (!(await verifyToken())) return;
 
     setIsLoading(true);
     try {
@@ -233,32 +213,31 @@ export default function ShiftsPage() {
         shift_name: formData.shift_name,
         shift_start_time: formData.shift_start_time,
         shift_end_time: formData.shift_end_time,
-        department: formData.department.id,
-        org_id: formData.org_id,
+        department: parseInt(formData.department.id),
+        org_id: parseInt(orgId),
       };
 
-      const url = isEditMode
-        ? `http://127.0.0.1:8000/api/shifts/update/${currentShift.shift_id}/`
-        : "http://127.0.0.1:8000/api/add-shift/";
-
-      const response = await fetch(url, {
-        method: isEditMode ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(shiftData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Failed to ${isEditMode ? "update" : "create"} shift`);
+      if (currentShift) {
+        // Update existing shift
+        await AxiosPost(
+          `shifts/update/${currentShift.shift_id}/`,
+          shiftData,
+          "PUT"
+        );
+        
+        toast({
+          title: "Success",
+          description: "Shift updated successfully.",
+        });
+      } else {
+        // Create new shift
+        await AxiosPost("add-shift/", shiftData);
+        
+        toast({
+          title: "Success",
+          description: "Shift created successfully.",
+        });
       }
-
-      toast({
-        title: "Success",
-        description: `Shift ${isEditMode ? "updated" : "created"} successfully.`,
-      });
 
       setIsOpen(false);
       resetForm();
@@ -267,7 +246,7 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.detail || `Failed to ${currentShift ? "update" : "create"} shift`,
       });
     } finally {
       setIsLoading(false);
@@ -275,29 +254,14 @@ export default function ShiftsPage() {
   };
 
   const handleDelete = async (shiftId) => {
-    if (!confirm("Are you sure you want to delete this shift?")) return;
-    
-    const token = getAccessToken();
-    if (!token || !(await verifyToken(token, router, toast))) return;
+    if (!(await verifyToken())) return;
 
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/shifts/delete/${shiftId}/`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to delete shift");
-      }
+      await AxiosPost(`shifts/delete/${shiftId}/`, {}, "DELETE");
 
       toast({
         title: "Shift Deleted",
         description: "Shift deleted successfully.",
-        variant: "destructive",
       });
       
       fetchShifts();
@@ -305,7 +269,7 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.detail || "Failed to delete shift",
       });
     }
   };
@@ -327,7 +291,7 @@ export default function ShiftsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    {isEditMode ? "Edit Shift" : "Create New Shift"}
+                    {currentShift ? "Edit Shift" : "Create New Shift"}
                   </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleShiftSubmit} className="space-y-4">
@@ -390,9 +354,16 @@ export default function ShiftsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Processing..." : isEditMode ? "Update Shift" : "Create Shift"}
-                  </Button>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? "Processing..." : currentShift ? "Update Shift" : "Create Shift"}
+                    </Button>
+                  </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -411,32 +382,62 @@ export default function ShiftsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shifts.map((shift) => (
-                <TableRow key={shift.shift_id}>
-                  <TableCell>{shift.shift_name}</TableCell>
-                  <TableCell>{shift.shift_start_time}</TableCell>
-                  <TableCell>{shift.shift_end_time}</TableCell>
-                  <TableCell>
-                    {departments.find(d => d.department_id === shift.department)?.details || "N/A"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleOpenDialog(shift)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleDelete(shift.shift_id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {shifts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                    No shifts found
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                shifts.map((shift) => (
+                  <TableRow key={shift.shift_id}>
+                    <TableCell>{shift.shift_name}</TableCell>
+                    <TableCell>{shift.shift_start_time}</TableCell>
+                    <TableCell>{shift.shift_end_time}</TableCell>
+                    <TableCell>
+                      {departments.find(d => d.department_id === shift.department)?.details || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleOpenDialog(shift)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Shift</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this shift? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(shift.shift_id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </Card>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { Button } from "@/components/ui/button";
@@ -18,69 +19,67 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-
-const getAccessToken = () => localStorage.getItem("access_token");
-const getOrgId = () => localStorage.getItem("org_id");
-
-const verifyToken = async (token, setTokenStatus, router) => {
-  if (!token) {
-    setTokenStatus("No token found.");
-    return false;
-  }
-
-  try {
-    const decodedToken = jwtDecode(token);
-    if (Date.now() >= decodedToken.exp * 1000) {
-      setTokenStatus("Token expired.");
-      localStorage.removeItem("access_token");
-      router.push("/login");
-      return false;
-    }
-
-    const response = await fetch("http://127.0.0.1:8000/api/token/verify/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-    });
-
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.detail || "Invalid token");
-    }
-
-    return true;
-  } catch (error) {
-    console.log("Token verification error:", error);
-    setTokenStatus("Invalid token.");
-    localStorage.removeItem("access_token");
-    router.push("/login");
-    return false;
-  }
-};
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [displayedOrganisation, setDisplayedOrganisation] = useState(null);
   const [formData, setFormData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [tokenStatus, setTokenStatus] = useState("");
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const { toast } = useToast();
+ const { orgId, logoutUser } = useAuth(); // Add logoutUser here // Get orgId from AuthContext
 
-  const fetchOrganisationDetails = async (token, orgId) => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
-        headers: { Authorization: `Bearer ${token}` },
+
+  // Helper function to verify token and handle authentication issues
+  const verifyToken = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No token found. Please login again.",
       });
+      router.push("/login");
+      return false;
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to fetch organization");
+    try {
+      const decodedToken = jwtDecode(token);
+      if (Date.now() >= decodedToken.exp * 1000) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Session expired. Please login again.",
+        });
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("org_id");
+        router.push("/login");
+        return false;
       }
 
-      const orgData = await response.json();
+      // Use AxiosPost from AuthContext
+      await AxiosPost("token/verify/", { token });
+      return true;
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Invalid token",
+      });
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("org_id");
+      router.push("/login");
+      return false;
+    }
+  };
 
+  const fetchOrganisationDetails = useCallback(async () => {
+    if (!(await verifyToken())) return;
+
+    try {
+      const orgData = await AxiosGet(`organisations/${orgId}/`);
+      
       const formattedData = {
         name: orgData.name || "",
         email: orgData.email || "",
@@ -90,12 +89,19 @@ export default function ProfilePage() {
       setDisplayedOrganisation(formattedData);
       setFormData({ ...formattedData, modified: false });
     } catch (error) {
-      setErrorMessage(error.message);
-      console.error("Fetch error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to fetch organization details",
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [orgId, router, toast]);
+
+  useEffect(() => {
+    fetchOrganisationDetails();
+  }, [fetchOrganisationDetails]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -108,35 +114,21 @@ export default function ProfilePage() {
   const handleSaveChanges = async (e) => {
     e.preventDefault();
     if (!formData || !formData.modified) return;
-
-    const token = getAccessToken();
-    const isValid = await verifyToken(token, setTokenStatus, router);
-    if (!isValid) return;
+    if (!(await verifyToken())) return;
 
     setIsLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/profile/${getOrgId()}/`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      // Using AxiosPost with PUT method
+      const updatedData = await AxiosPost(
+        `profile/${orgId}/`,
+        {
           name: formData.name,
           email: formData.email,
           details: formData.details,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to update profile");
-      }
-
-      const updatedData = await response.json();
+        },
+        "PUT"
+      );
 
       setDisplayedOrganisation({
         name: updatedData.name,
@@ -151,43 +143,39 @@ export default function ProfilePage() {
         modified: false,
       });
 
-      setSuccessMessage("Profile updated successfully!");
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+      
       setShowSuccessDialog(true);
     } catch (error) {
-      setErrorMessage(error.message);
-      console.error("Update error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update profile",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+  const checkAuth = async () => {
+    if (!(await verifyToken())) {
+      router.push("/login");
+    }
+  };
+  checkAuth();
+}, [router]);
+
+useEffect(() => {
+  fetchOrganisationDetails();
+}, [fetchOrganisationDetails]);
+
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
   };
-
-  useEffect(() => {
-    const initialize = async () => {
-      const token = getAccessToken();
-      if (!token) {
-        setIsLoading(false);
-        router.push("/login");
-        return;
-      }
-
-      const isValid = await verifyToken(token, setTokenStatus, router);
-      if (isValid) {
-        const orgId = getOrgId();
-        if (orgId) {
-          await fetchOrganisationDetails(token, orgId);
-        } else {
-          setErrorMessage("Organization ID not found.");
-        }
-      } else {
-        setIsLoading(false);
-      }
-    };
-    initialize();
-  }, [router]);
 
   if (isLoading) {
     return (
@@ -195,22 +183,6 @@ export default function ProfilePage() {
         <Header />
         <div className="p-6 flex items-center justify-center min-h-screen">
           <div className="text-lg">Loading organization details...</div>
-        </div>
-      </>
-    );
-  }
-
-  if (errorMessage && !displayedOrganisation) {
-    return (
-      <>
-        <Header />
-        <div className="p-6">
-          <div className="mb-4 p-4 text-white bg-red-600 rounded-md">
-            {errorMessage}
-          </div>
-          <Button onClick={() => router.push("/login")}>
-            Return to Login
-          </Button>
         </div>
       </>
     );
@@ -242,24 +214,6 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-bold">Organisation Profile</h1>
         </div>
 
-        {errorMessage && (
-          <div className="mb-4 p-4 text-white bg-red-600 rounded-md">
-            {errorMessage}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-4 p-4 text-white bg-green-600 rounded-md">
-            {successMessage}
-          </div>
-        )}
-
-        {tokenStatus && (
-          <div className={`mb-4 p-4 text-white ${tokenStatus.includes("valid") ? "bg-green-600" : "bg-red-600"} rounded-md`}>
-            {tokenStatus}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="col-span-1">
             <CardHeader>
@@ -273,6 +227,9 @@ export default function ProfilePage() {
               <h2 className="text-xl font-semibold">{displayedOrganisation.name}</h2>
               <p className="text-sm text-muted-foreground">{displayedOrganisation.email}</p>
               <p className="text-sm text-muted-foreground">{displayedOrganisation.details}</p>
+              <Button variant="outline" className="mt-4" onClick={logoutUser}>
+      Logout
+    </Button>
             </CardContent>
           </Card>
 

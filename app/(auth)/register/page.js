@@ -1,5 +1,9 @@
 "use client"
 
+import { useState, useContext } from "react"
+import { useRouter } from "next/navigation"
+import { AuthContext } from "@/context/AuthContext"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,77 +16,61 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Building } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useToast } from "hooks/use-toast.ts"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
 
 export default function RegisterPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { registerUser } = useContext(AuthContext) // Get register function from AuthContext
   const [isLoading, setIsLoading] = useState(false)
-  const [generatedPassword, setGeneratedPassword] = useState("");
+  const [generatedPassword, setGeneratedPassword] = useState("")
 
   const [formData, setFormData] = useState({
     name: "",
     mobile_number: "",
-    password: ""
   })
 
   const handlePhoneChange = (value) => {
-  setFormData((prev) => ({
-    ...prev,
-    mobile_number: value,
-  }));
-};
-
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-
-  try {
-    const response = await fetch("http://127.0.0.1:8000/api/org/signup/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: formData.name,
-        mobile_number: formData.mobile_number,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setGeneratedPassword(data.generated_password || "Check SMS for your password");
-
-      toast({
-        title: "Registration successful",
-        description: "Your organization has been registered successfully.",
-      });
-    } else {
-      throw new Error(data?.error || "An error occurred during registration");
-    }
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-  } finally {
-    setIsLoading(false);
+    setFormData((prev) => ({
+      ...prev,
+      mobile_number: value,
+    }))
   }
-};
-
-
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.id]: e.target.value
     })
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      const response = await registerUser(formData) // Use registerUser from context
+
+      if (response?.success) {
+        setGeneratedPassword(response.generated_password || "Check SMS for your password")
+
+        toast({
+          title: "Registration successful",
+          description: "Your organization has been registered successfully.",
+        })
+      } else {
+        throw new Error(response?.message || "An error occurred during registration")
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -111,20 +99,20 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-  <Label htmlFor="mobile_number">Phone Number</Label>
-  <PhoneInput
-    country={"in"} // Default to India
-    value={formData.mobile_number}
-    onChange={handlePhoneChange} // Calls handlePhoneChange when phone input changes
-    inputProps={{
-      name: "mobile_number",
-      required: true,
-      autoFocus: false,
-    }}
-    enableSearch={true} // Allow country search
-    countryCodeEditable={false} // Prevent manual change of country code
-  />
-</div>
+              <Label htmlFor="mobile_number">Phone Number</Label>
+              <PhoneInput
+                country={"in"} 
+                value={formData.mobile_number}
+                onChange={handlePhoneChange}
+                inputProps={{
+                  name: "mobile_number",
+                  required: true,
+                  autoFocus: false,
+                }}
+                enableSearch={true} 
+                countryCodeEditable={false} 
+              />
+            </div>
             <Button
               className="w-full"
               size="lg"
@@ -134,11 +122,10 @@ export default function RegisterPage() {
               {isLoading ? "Registering..." : "Register Organization"}
             </Button>
             {generatedPassword && (
-  <div className="mt-3 text-center text-sm font-medium text-green-600">
-    Your password: <span className="font-bold">{generatedPassword}</span>
-  </div>
-)}
-
+              <div className="mt-3 text-center text-sm font-medium text-green-600">
+                Your password: <span className="font-bold">{generatedPassword}</span>
+              </div>
+            )}
           </form>
           <div className="text-center text-sm">
             Already have an account?{" "}
