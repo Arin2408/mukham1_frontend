@@ -31,6 +31,11 @@ export function Header() {
           </Link>
         </div>
         <nav className="flex items-center gap-4">
+          <Link href="/dashboard2">
+            <Button variant="ghost" size="sm" className={pathname === "/designation" ? "bg-muted" : ""}>
+              EmployeeDashboard
+            </Button>
+          </Link>
           <Link href="/designation">
             <Button variant="ghost" size="sm" className={pathname === "/designation" ? "bg-muted" : ""}>
               Designation

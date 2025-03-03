@@ -180,7 +180,7 @@ const AuthProvider = ({ children }) => {
       setUser(null);
       setLoading(false);
       setAuthChecked(true);
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -192,13 +192,13 @@ const AuthProvider = ({ children }) => {
       } else {
         localStorage.clear();
         setUser(null);
-        router.push("/login");
+        router.push("/l");
       }
     } catch (error) {
       console.error("Error checking login status:", error);
       localStorage.clear();
       setUser(null);
-      router.push("/login");
+      router.push("/");
     } finally {
       setLoading(false);
       setAuthChecked(true);
