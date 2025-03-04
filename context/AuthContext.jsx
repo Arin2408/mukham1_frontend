@@ -83,7 +83,7 @@ Axios.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.clear();
       setUser(null);
-      router.push("/login");
+      router.push("/");
       toast({
         variant: "destructive",
         title: "Session Expired",
@@ -192,7 +192,7 @@ const AuthProvider = ({ children }) => {
       } else {
         localStorage.clear();
         setUser(null);
-        router.push("/l");
+        router.push("/");
       }
     } catch (error) {
       console.error("Error checking login status:", error);
@@ -239,7 +239,7 @@ const AuthProvider = ({ children }) => {
       setAuthChecked(false); // Reset auth check to force revalidation
 
       // Redirect to login page
-      router.push("/login");
+      router.push("/");
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
