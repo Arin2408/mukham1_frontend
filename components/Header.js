@@ -51,7 +51,7 @@ export function Header() {
               Location
             </Button>
           </Link>
-          <Link href="/roles">
+          {/* <Link href="/roles">
             <Button variant="ghost" size="sm" className={pathname === "/roles" ? "bg-muted" : ""}>
               Roles
             </Button>
@@ -60,7 +60,7 @@ export function Header() {
             <Button variant="ghost" size="sm" className={pathname === "/attendance" ? "bg-muted" : ""}>
               Attendance
             </Button>
-          </Link>
+          </Link> */}
           <Link href="/shifts">
             <Button variant="ghost" size="sm" className={pathname === "/shifts" ? "bg-muted" : ""}>
               Shifts
@@ -71,11 +71,11 @@ export function Header() {
               Profile
             </Button>
           </Link>
-          <Link href="/">
+          {/* <Link href="/">
             <Button variant="ghost" size="sm" className={pathname === "/" ? "bg-muted" : ""}>
               Log Out
             </Button>
-          </Link>
+          </Link> */}
         </nav>
       </div>
     </div>

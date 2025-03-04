@@ -1,85 +1,80 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { useState, useContext } from "react";
+import { useRouter } from "next/navigation";
+import { AuthContext } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Building } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useToast } from "hooks/use-toast.ts"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Building } from "lucide-react";
+import Link from "next/link";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const { loginUser } = useContext(AuthContext);
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     mobile_number: "",
-    password: ""
-  })
+    password: "",
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/org/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
+  const handlePhoneChange = (value) => {
+    const formattedNumber = value.replace("+", "").trim(); // Remove `+` and spaces
+    setFormData((prev) => ({
+        ...prev,
+        mobile_number: formattedNumber,
+    }));
+};
 
-      const data = await response.json()
 
-      if (response.ok) {
-        // Show success toast
-        toast({
-          title: "Login successful",
-          description: "Welcome to the dashboard",
-        })
-
-        // Set the access and refresh tokens in localStorage
-        localStorage.setItem('access_token', data.access)
-        localStorage.setItem('refresh_token', data.refresh)
-        localStorage.setItem('org_id', data.org_id)
-
-        // Redirect to the dashboard using router.push
-        router.push("/dashboard")
-      } else {
-        // Show error toast with the message from backend
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: data.detail || "Invalid login credentials",
-        })
-      }
-    } catch (error) {
-      // Show error toast
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An error occurred during login",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value
-    })
-  }
+      [e.target.id]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const response = await loginUser(formData);
+
+      if (response?.success) {
+        toast({
+          title: "Login successful",
+          description: "Redirecting to your dashboard...",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: response?.message || "Invalid credentials",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred during login",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -96,29 +91,33 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mobile_number">Mobile Number</Label>
-              <Input 
-                id="mobile_number" 
-                type="tel" 
-                placeholder="Enter your mobile number"
+              <Label htmlFor="mobile_number">Phone Number</Label>
+              <PhoneInput
+                country={"in"}
                 value={formData.mobile_number}
-                onChange={handleChange}
-                disabled={isLoading}
+                onChange={handlePhoneChange}
+                inputProps={{
+                  name: "mobile_number",
+                  required: true,
+                  autoFocus: false,
+                }}
+                enableSearch={true}
+                countryCodeEditable={false}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
+              <Input
+                id="password"
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
               />
             </div>
-            <Button 
-              className="w-full" 
-              size="lg" 
+            <Button
+              className="w-full"
+              size="lg"
               type="submit"
               disabled={isLoading}
             >
@@ -133,5 +132,5 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

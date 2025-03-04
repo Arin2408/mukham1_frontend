@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,66 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserPlus, Users, FileDown } from "lucide-react";
-import { Header } from '@/components/Header';
+import { UserPlus, Users, FileDown, Search } from "lucide-react";
+import { Header } from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
-
-const getAccessToken = () => localStorage.getItem("access_token");
-const getOrgId = () => localStorage.getItem("org_id");
-
-const verifyToken = async (token, router, toast) => {
-  if (!token) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "No token found. Please login again.",
-    });
-    router.push("/login");
-    return false;
-  }
-
-  try {
-    const decodedToken = jwtDecode(token);
-    if (Date.now() >= decodedToken.exp * 1000) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Session expired. Please login again.",
-      });
-      localStorage.removeItem("access_token");
-      router.push("/login");
-      return false;
-    }
-
-    const response = await fetch("http://127.0.0.1:8000/api/token/verify/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Invalid token");
-    }
-
-    return true;
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-    localStorage.removeItem("access_token");
-    router.push("/login");
-    return false;
-  }
-};
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export default function EmployeePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { orgId } = useAuth(); // Get orgId from AuthContext
+
   const [formData, setFormData] = useState({
     mobile_number: "",
     first_name: "",
@@ -80,8 +34,8 @@ export default function EmployeePage() {
     designation: "",
     shift: "",
     office_location: "",
-    organisation: getOrgId(),
-    org_id: getOrgId(),
+    organisation: "",
+    org_id: "",
   });
 
   const [departments, setDepartments] = useState([]);
@@ -91,66 +45,89 @@ export default function EmployeePage() {
   const [employees, setEmployees] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
+  const [organizationName, setOrganizationName] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [employeesPerPage] = useState(10);
 
-  useEffect(() => {
-    const token = getAccessToken();
-    verifyToken(token, router, toast).then(isValid => {
-      if (isValid) {
-        fetchOrganization();
-        fetchMasterData();
-        fetchEmployees();
+  // Helper function to verify token and handle authentication issues
+  const verifyToken = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No token found. Please login again.",
+      });
+      router.push("/login");
+      return false;
+    }
+
+    try {
+      const decodedToken = jwtDecode(token);
+      if (Date.now() >= decodedToken.exp * 1000) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Session expired. Please login again.",
+        });
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("org_id");
+        router.push("/login");
+        return false;
       }
-    });
-  }, [router, toast]);
+
+      // Use AxiosPost from AuthContext
+      await AxiosPost("token/verify/", { token });
+      return true;
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Invalid token",
+      });
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("org_id");
+      router.push("/login");
+      return false;
+    }
+  };
 
   const fetchOrganization = useCallback(async () => {
-    const token = getAccessToken();
-    const orgId = getOrgId();
-    if (!token || !orgId) return;
+    if (!(await verifyToken())) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const data = await AxiosGet(`organisations/${orgId}/`);
+      setOrganizationName(data.name);
 
-      if (response.ok) {
-        const data = await response.json();
-        setOrganizationName(data.name);
-      }
+      // Update formData with organization info
+      setFormData((prev) => ({
+        ...prev,
+        organisation: orgId,
+        org_id: orgId,
+      }));
     } catch (error) {
-      console.error("Error fetching organization:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error.response?.data?.detail || "Failed to fetch organization",
+      });
     }
-  }, []);
+  }, [orgId, toast]);
 
   const fetchMasterData = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) return;
+    if (!(await verifyToken())) return;
 
     try {
-      const orgId = getOrgId();
-      const [deptRes, desigRes, shiftRes, locRes] = await Promise.all([
-        fetch(`http://127.0.0.1:8000/api/departments/?org_id=${orgId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://127.0.0.1:8000/api/designations/?org_id=${orgId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://127.0.0.1:8000/api/shifts/?org_id=${orgId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://127.0.0.1:8000/api/locations/?org_id=${orgId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [departments, designations, shifts, locations] = await Promise.all([
+        AxiosGet(`departments/?org_id=${orgId}`),
+        AxiosGet(`designations/?org_id=${orgId}`),
+        AxiosGet(`shifts/?org_id=${orgId}`),
+        AxiosGet(`locations/?org_id=${orgId}`),
       ]);
 
-      const [depts, designations, shifts, locations] = await Promise.all([
-        deptRes.json(),
-        desigRes.json(),
-        shiftRes.json(),
-        locRes.json(),
-      ]);
-
-      setDepartments(depts);
+      setDepartments(departments);
       setDesignations(designations);
       setShifts(shifts);
       setLocations(locations);
@@ -158,73 +135,81 @@ export default function EmployeePage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description:
+          error.response?.data?.detail || "Failed to fetch master data",
       });
     }
-  }, [toast]);
+  }, [orgId, toast]);
 
   const fetchEmployees = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) return;
+    if (!(await verifyToken())) return;
 
     try {
-      const orgId = getOrgId();
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/list/?org_id=${orgId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (!response.ok) throw new Error("Failed to fetch employees");
-      const data = await response.json();
+      const data = await AxiosGet(`list/?org_id=${orgId}`);
       setEmployees(data);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description:
+          error.response?.data?.detail || "Failed to fetch employees",
       });
     }
-  }, [toast]);
+  }, [orgId, toast]);
+
+  useEffect(() => {
+    fetchOrganization();
+    fetchMasterData();
+    fetchEmployees();
+  }, [fetchOrganization, fetchMasterData, fetchEmployees]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhoneChange = (value, country) => {
+    // Assuming the country code is provided by react-phone-input-2
+    const countryCodeLength = country.dialCode.length; // e.g., "91" has length 2
+    const fullNumber = value.replace("+", "").trim(); // Remove "+" sign
+    const mobileNumber = fullNumber.slice(countryCodeLength); // Extract number after country code
+
+    setFormData((prev) => ({
+      ...prev,
+      mobile_number: mobileNumber, // Store only the 10-digit number
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = getAccessToken();
-    if (!token || !(await verifyToken(token, router, toast))) return;
+    if (isSubmitting) return;
+    if (!(await verifyToken())) return;
 
     setIsSubmitting(true);
 
     try {
-      if (!/^\d{10}$/.test(formData.mobile_number)) {
-        throw new Error("Please enter a valid 10-digit mobile number");
+      // Ensure the number is numeric
+      const mobileNumber = formData.mobile_number;
+
+      if (!/^\d{10}$/.test(mobileNumber)) {
+        throw new Error(
+          "Please enter a valid 10-digit mobile number (e.g., 9876545678)."
+        );
       }
 
+      // Validate email
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         throw new Error("Please enter a valid email address");
       }
 
-      const response = await fetch("http://127.0.0.1:8000/api/signup/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to add employee");
-      }
+      // Send formatted data to backend
+      await AxiosPost("signup/", { ...formData });
 
       toast({
         title: "Success",
         description: "Employee added successfully!",
       });
 
+      // Reset form fields
       setFormData({
         mobile_number: "",
         first_name: "",
@@ -234,7 +219,8 @@ export default function EmployeePage() {
         designation: "",
         shift: "",
         office_location: "",
-        org_id: getOrgId(),
+        organisation: orgId,
+        org_id: orgId,
       });
 
       fetchEmployees();
@@ -242,7 +228,10 @@ export default function EmployeePage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description:
+          error.response?.data?.detail ||
+          error.message ||
+          "Failed to add employee",
       });
     } finally {
       setIsSubmitting(false);
@@ -251,37 +240,67 @@ export default function EmployeePage() {
 
   const exportToCSV = (data) => {
     const headers = [
-      "First Name", "Last Name", "Mobile Number", "Email",
-      "Department", "Designation", "Shift", "Location"
-    ].join(',');
+      "First Name",
+      "Last Name",
+      "Mobile Number",
+      "Email",
+      "Department",
+      "Designation",
+      "Shift",
+      "Location",
+    ].join(",");
 
-    const rows = data.map(employee => [
-      employee.first_name,
-      employee.last_name,
-      employee.mobile_number,
-      employee.email,
-      departments.find(d => d.department_id.toString() === employee.department)?.details || '',
-      designations.find(d => d.designation_id.toString() === employee.designation)?.details || '',
-      shifts.find(s => s.shift_id.toString() === employee.shift)?.shift_name || '',
-      locations.find(l => l.location_id.toString() === employee.office_location)?.location_name || ''
-    ].join(','));
+    const rows = data.map((employee) =>
+      [
+        employee.first_name,
+        employee.last_name,
+        employee.mobile_number,
+        employee.email,
+        departments.find(
+          (d) => d.department_id.toString() === employee.department
+        )?.details || "",
+        designations.find(
+          (d) => d.designation_id.toString() === employee.designation
+        )?.details || "",
+        shifts.find((s) => s.shift_id.toString() === employee.shift)
+          ?.shift_name || "",
+        locations.find(
+          (l) => l.location_id.toString() === employee.office_location
+        )?.location_name || "",
+      ].join(",")
+    );
 
-    return [headers, ...rows].join('\n');
+    return [headers, ...rows].join("\n");
   };
 
   const exportToJSON = (data) => {
-    return JSON.stringify(data.map(employee => ({
-      ...employee,
-      department: departments.find(d => d.department_id.toString() === employee.department)?.details || '',
-      designation: designations.find(d => d.designation_id.toString() === employee.designation)?.details || '',
-      shift: shifts.find(s => s.shift_id.toString() === employee.shift)?.shift_name || '',
-      office_location: locations.find(l => l.location_id.toString() === employee.office_location)?.location_name || ''
-    }), null, 2));
+    return JSON.stringify(
+      data.map((employee) => ({
+        ...employee,
+        department:
+          departments.find(
+            (d) => d.department_id.toString() === employee.department
+          )?.details || "",
+        designation:
+          designations.find(
+            (d) => d.designation_id.toString() === employee.designation
+          )?.details || "",
+        shift:
+          shifts.find((s) => s.shift_id.toString() === employee.shift)
+            ?.shift_name || "",
+        office_location:
+          locations.find(
+            (l) => l.location_id.toString() === employee.office_location
+          )?.location_name || "",
+      })),
+      null,
+      2
+    );
   };
 
   const handleExport = () => {
     let content, filename, type;
-    
+
     if (exportFormat === "csv") {
       content = exportToCSV(employees);
       filename = "employees.csv";
@@ -294,12 +313,57 @@ export default function EmployeePage() {
 
     const blob = new Blob([content], { type });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', filename);
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Search and pagination logic
+  const filteredEmployees = employees.filter(
+    (employee) =>
+      employee.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.mobile_number.includes(searchTerm)
+  );
+
+  // Get current employees
+  const indexOfLastEmployee = currentPage * employeesPerPage;
+  const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
+  const currentEmployees = filteredEmployees.slice(
+    indexOfFirstEmployee,
+    indexOfLastEmployee
+  );
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // Get department, designation, shift, and location names by their IDs
+  const getDepartmentName = (id) => {
+    const dept = departments.find(
+      (d) => String(d.department_id) === String(id)
+    );
+    return dept?.details || "N/A";
+  };
+
+  const getDesignationName = (id) => {
+    const desig = designations.find(
+      (d) => String(d.designation_id) === String(id)
+    );
+    return desig?.details || "N/A";
+  };
+
+  const getShiftName = (id) => {
+    const shift = shifts.find((s) => String(s.shift_id) === String(id));
+    return shift?.shift_name || "N/A";
+  };
+
+  const getLocationName = (id) => {
+    const loc = locations.find((l) => String(l.location_id) === String(id));
+    return loc?.location_name || "N/A";
   };
 
   return (
@@ -335,7 +399,7 @@ export default function EmployeePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">Add New Employee</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -345,7 +409,9 @@ export default function EmployeePage() {
                   <Input
                     required
                     value={formData.first_name}
-                    onChange={(e) => handleInputChange("first_name", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("first_name", e.target.value)
+                    }
                     placeholder="Enter first name"
                   />
                 </div>
@@ -354,20 +420,29 @@ export default function EmployeePage() {
                   <Input
                     required
                     value={formData.last_name}
-                    onChange={(e) => handleInputChange("last_name", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("last_name", e.target.value)
+                    }
                     placeholder="Enter last name"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Mobile Number</label>
-                <Input
-                  required
-                  value={formData.mobile_number}
-                  onChange={(e) => handleInputChange("mobile_number", e.target.value)}
-                  placeholder="Enter 10-digit mobile number"
-                  maxLength={10}
+                <label htmlFor="mobile_number">Phone Number</label>
+                <PhoneInput
+                  country={"in"} // Default to India
+                  value={
+                    formData.mobile_number ? `91${formData.mobile_number}` : ""
+                  } // Prepend "91" for display
+                  onChange={handlePhoneChange}
+                  inputProps={{
+                    name: "mobile_number",
+                    required: true,
+                    autoFocus: false,
+                  }}
+                  enableSearch={true}
+                  countryCodeEditable={false}
                 />
               </div>
 
@@ -388,15 +463,17 @@ export default function EmployeePage() {
                   <Select
                     required
                     value={formData.department}
-                    onValueChange={(value) => handleInputChange("department", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("department", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem 
-                          key={dept.department_id} 
+                        <SelectItem
+                          key={dept.department_id}
                           value={dept.department_id.toString()}
                         >
                           {dept.details}
@@ -410,15 +487,17 @@ export default function EmployeePage() {
                   <Select
                     required
                     value={formData.designation}
-                    onValueChange={(value) => handleInputChange("designation", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("designation", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select designation" />
                     </SelectTrigger>
                     <SelectContent>
                       {designations.map((desig) => (
-                        <SelectItem 
-                          key={desig.designation_id} 
+                        <SelectItem
+                          key={desig.designation_id}
                           value={desig.designation_id.toString()}
                         >
                           {desig.details}
@@ -442,8 +521,8 @@ export default function EmployeePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {shifts.map((shift) => (
-                        <SelectItem 
-                          key={shift.shift_id} 
+                        <SelectItem
+                          key={shift.shift_id}
                           value={shift.shift_id.toString()}
                         >
                           {shift.shift_name}
@@ -457,15 +536,17 @@ export default function EmployeePage() {
                   <Select
                     required
                     value={formData.office_location}
-                    onValueChange={(value) => handleInputChange("office_location", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("office_location", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((loc) => (
-                        <SelectItem 
-                          key={loc.location_id} 
+                        <SelectItem
+                          key={loc.location_id}
                           value={loc.location_id.toString()}
                         >
                           {loc.location_name}
@@ -483,32 +564,107 @@ export default function EmployeePage() {
             </form>
           </Card>
 
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Recent Employees</h2>
-            <div className="space-y-4">
-              {employees.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No employees added yet
-                </p>
-              ) : (
-                employees.slice(-5).map((employee) => (
-                  <Card key={employee.employee_id} className="p-4">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span className="text-muted-foreground">Name:</span>
-                      <span>{`${employee.first_name} ${employee.last_name}`}</span>
-                      <span className="text-muted-foreground">Mobile:</span>
-                      <span>{employee.mobile_number}</span>
-                      <span className="text-muted-foreground">Email:</span>
-                      <span>{employee.email}</span>
-                      <span className="text-muted-foreground">Department:</span>
-                      <span>
-                        {departments.find(d => d.department_id.toString() === employee.department)?.details}
-                      </span>
-                    </div>
-                  </Card>
-                ))
-              )}
+          <Card className="p-6 col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">All Employees</h2>
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search employees..."
+                  className="w-64"
+                />
+              </div>
             </div>
+
+            {employees.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No employees added yet
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-2 text-left">Name</th>
+                        <th className="py-2 text-left">Mobile</th>
+                        <th className="py-2 text-left">Email</th>
+                        <th className="py-2 text-left">Department</th>
+                        <th className="py-2 text-left">Designation</th>
+                        <th className="py-2 text-left">Shift</th>
+                        <th className="py-2 text-left">Location</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentEmployees.map((employee) => (
+                        <tr
+                          key={employee.employee_id}
+                          className="border-b hover:bg-gray-50"
+                        >
+                          <td className="py-3">{`${employee.first_name} ${employee.last_name}`}</td>
+                          <td className="py-3">{employee.mobile_number}</td>
+                          <td className="py-3">{employee.email}</td>
+                          <td className="py-3">
+                            {getDepartmentName(employee.department)}
+                          </td>
+                          <td className="py-3">
+                            {getDesignationName(employee.designation)}
+                          </td>
+                          <td className="py-3">
+                            {getShiftName(employee.shift)}
+                          </td>
+                          <td className="py-3">
+                            {getLocationName(employee.office_location)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filteredEmployees.length > employeesPerPage && (
+                  <div className="flex justify-center mt-4 space-x-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => paginate(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({
+                      length: Math.ceil(
+                        filteredEmployees.length / employeesPerPage
+                      ),
+                    }).map((_, index) => (
+                      <Button
+                        key={index}
+                        variant={
+                          currentPage === index + 1 ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => paginate(index + 1)}
+                      >
+                        {index + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => paginate(currentPage + 1)}
+                      disabled={
+                        currentPage ===
+                        Math.ceil(filteredEmployees.length / employeesPerPage)
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </Card>
         </div>
       </div>

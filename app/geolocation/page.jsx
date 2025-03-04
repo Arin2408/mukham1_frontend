@@ -1,79 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin, Save, Search } from "lucide-react";
 import { Header } from "@/components/Header";
+import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
 import "leaflet/dist/leaflet.css";
-import { useToast } from "hooks/use-toast";
-import { jwtDecode } from "jwt-decode";
+import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-
-// Utility function to get access token and org_id from localStorage
-const getAccessToken = () => localStorage.getItem("access_token");
-const getOrgId = () => localStorage.getItem("org_id");
-
-// Token verification function
-const verifyToken = async (token, router, toast) => {
-  if (!token) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "No token found. Please login again.",
-    });
-    router.push("/login");
-    return false;
-  }
-
-  try {
-    const decodedToken = jwtDecode(token);
-    if (Date.now() >= decodedToken.exp * 1000) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Session expired. Please login again.",
-      });
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("org_id");
-      router.push("/login");
-      return false;
-    }
-
-    const response = await fetch("http://127.0.0.1:8000/api/token/verify/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Invalid token");
-    }
-
-    return true;
-  } catch (error) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: error.message,
-    });
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("org_id");
-    router.push("/login");
-    return false;
-  }
-};
 
 export default function MapPage() {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const { toast } = useToast();
   const router = useRouter();
+  const { orgId } = useAuth(); // Get orgId from AuthContext
+
   const [locationData, setLocationData] = useState({
     location_name: "",
-    org: { id: getOrgId(), name: "" },
+    org: { id: "", name: "" },
     latitude: "",
     longitude: "",
   });
@@ -82,44 +29,26 @@ export default function MapPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch organization details on mount
+  const fetchOrganizationDetails = useCallback(async () => {
+    try {
+      const data = await AxiosGet(`organisations/${orgId}/`);
+      setLocationData((prev) => ({
+        ...prev,
+        org: { id: orgId, name: data.name },
+      }));
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error.response?.data?.detail || "Failed to fetch organization",
+      });
+    }
+  }, [orgId, toast]);
+
   useEffect(() => {
-    const fetchOrganizationDetails = async () => {
-      const token = getAccessToken();
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      const tokenValid = await verifyToken(token, router, toast);
-      if (!tokenValid) return;
-
-      try {
-        const orgId = getOrgId();
-        const response = await fetch(`http://127.0.0.1:8000/api/organisations/${orgId}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to fetch organization");
-        }
-
-        const data = await response.json();
-        setLocationData((prev) => ({
-          ...prev,
-          org: { id: getOrgId(), name: data.name },
-        }));
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
-      }
-    };
-
     fetchOrganizationDetails();
-  }, [router, toast]);
+  }, [fetchOrganizationDetails]);
 
   // Map initialization
   useEffect(() => {
@@ -201,7 +130,8 @@ export default function MapPage() {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Location not found. Please try a different search term.",
+          description:
+            "Location not found. Please try a different search term.",
         });
       }
     } catch (error) {
@@ -235,32 +165,15 @@ export default function MapPage() {
       return;
     }
 
-    const token = getAccessToken();
-    const tokenValid = await verifyToken(token, router, toast);
-    if (!tokenValid) return;
-
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/locations/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          location_name: locationData.location_name.trim(),
-          org: locationData.org.id,
-          latitude: locationData.latitude,
-          longitude: locationData.longitude,
-        }),
+      const response = await AxiosPost("locations/", {
+        location_name: locationData.location_name.trim(),
+        org: locationData.org.id,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to save location");
-      }
-
-      const data = await response.json();
-      setSubmittedData(data);
+      setSubmittedData(response);
 
       toast({
         title: "Success",
@@ -269,7 +182,7 @@ export default function MapPage() {
 
       setLocationData({
         location_name: "",
-        org: locationData.org,
+        org: { id: orgId, name: locationData.org.name },
         latitude: "",
         longitude: "",
       });
@@ -282,7 +195,7 @@ export default function MapPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.detail || "Failed to save location",
       });
     } finally {
       setIsLoading(false);
@@ -349,52 +262,61 @@ export default function MapPage() {
                 />
               </div>
 
-              <Input
-                placeholder="Organization"
-                value={locationData.org.name}
-                onChange={(e) =>
-                  setLocationData((prev) => ({
-                    ...prev,
-                    org: { ...prev.org, name: e.target.value },
-                  }))
-                }
-                readOnly // Set this to readOnly since org is fetched automatically
-              />
-              <Input
-                placeholder="Latitude"
-                value={locationData.latitude}
-                onChange={(e) =>
-                  setLocationData((prev) => ({
-                    ...prev,
-                    latitude: e.target.value,
-                  }))
-                }
-              />
-              <Input
-                placeholder="Longitude"
-                value={locationData.longitude}
-                onChange={(e) =>
-                  setLocationData((prev) => ({
-                    ...prev,
-                    longitude: e.target.value,
-                  }))
-                }
-              />
+              <div className="space-y-2">
+                <label htmlFor="organization" className="text-sm font-medium">
+                  Organization
+                </label>
+                <Input
+                  id="organization"
+                  placeholder="Organization"
+                  value={locationData.org.name}
+                  readOnly
+                />
+              </div>
 
-              <Button type="submit" disabled={isLoading}>
+              <div className="space-y-2">
+                <label htmlFor="latitude" className="text-sm font-medium">
+                  Latitude
+                </label>
+                <Input
+                  id="latitude"
+                  placeholder="Latitude"
+                  value={locationData.latitude}
+                  onChange={(e) =>
+                    setLocationData((prev) => ({
+                      ...prev,
+                      latitude: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="longitude" className="text-sm font-medium">
+                  Longitude
+                </label>
+                <Input
+                  id="longitude"
+                  placeholder="Longitude"
+                  value={locationData.longitude}
+                  onChange={(e) =>
+                    setLocationData((prev) => ({
+                      ...prev,
+                      longitude: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <Button type="submit" disabled={isLoading} className="w-full">
                 <Save className="mr-2 h-4 w-4" />
                 {isLoading ? "Submitting..." : "Submit"}
               </Button>
             </form>
           </Card>
         </div>
-
-        {/* {submittedData && (
-          <Card className="p-6 mt-8">
-            <h2 className="text-lg font-semibold mb-4">Submitted Data</h2>
-            <pre>{JSON.stringify(submittedData, null, 2)}</pre>
-          </Card>
-        )} */}
       </div>
     </>
   );
