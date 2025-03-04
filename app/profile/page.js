@@ -36,11 +36,12 @@ export default function ProfilePage() {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
+
         variant: "destructive",
         title: "Error",
         description: "No token found. Please login again.",
       });
-      router.push("/login");
+      router.push("/");
       return false;
     }
 
@@ -54,7 +55,7 @@ export default function ProfilePage() {
         });
         localStorage.removeItem("access_token");
         localStorage.removeItem("org_id");
-        router.push("/login");
+        router.push("/");
         return false;
       }
 
@@ -69,7 +70,7 @@ export default function ProfilePage() {
       });
       localStorage.removeItem("access_token");
       localStorage.removeItem("org_id");
-      router.push("/login");
+      router.push("/");
       return false;
     }
   };
@@ -163,7 +164,7 @@ export default function ProfilePage() {
   useEffect(() => {
   const checkAuth = async () => {
     if (!(await verifyToken())) {
-      router.push("/login");
+      router.push("/");
     }
   };
   checkAuth();
@@ -196,7 +197,7 @@ useEffect(() => {
           <div className="mb-4 p-4 text-white bg-yellow-600 rounded-md">
             No organization data found. Please contact support.
           </div>
-          <Button onClick={() => router.push("/login")}>
+          <Button onClick={() => router.push("/")}>
             Return to Login
           </Button>
         </div>
