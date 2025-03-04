@@ -15,7 +15,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const Axios = axios.create({ baseURL: "http://127.0.0.1:8000/api/" });
+export const Axios = axios.create({ baseURL: "https://sahidahm.pythonanywhere.com/api/" });
 
 export const AxiosPost = async (apiname, body, method = "post") => {
   try {
