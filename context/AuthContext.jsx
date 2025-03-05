@@ -15,7 +15,9 @@ export const useAuth = () => {
   return context;
 };
 
-export const Axios = axios.create({ baseURL: "https://sahidahm.pythonanywhere.com/api/" });
+export const Axios = axios.create({
+  baseURL: "https://sahidahm.pythonanywhere.com/api/",
+});
 
 export const AxiosPost = async (apiname, body, method = "post") => {
   try {
@@ -83,7 +85,7 @@ Axios.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.clear();
       setUser(null);
-      router.push("/login");
+      router.push("/");
       toast({
         variant: "destructive",
         title: "Session Expired",
@@ -180,7 +182,7 @@ const AuthProvider = ({ children }) => {
       setUser(null);
       setLoading(false);
       setAuthChecked(true);
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -192,13 +194,13 @@ const AuthProvider = ({ children }) => {
       } else {
         localStorage.clear();
         setUser(null);
-        router.push("/login");
+        router.push("/");
       }
     } catch (error) {
       console.error("Error checking login status:", error);
       localStorage.clear();
       setUser(null);
-      router.push("/login");
+      router.push("/");
     } finally {
       setLoading(false);
       setAuthChecked(true);
@@ -239,7 +241,7 @@ const AuthProvider = ({ children }) => {
       setAuthChecked(false); // Reset auth check to force revalidation
 
       // Redirect to login page
-      router.push("/login");
+      router.push("/");
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
