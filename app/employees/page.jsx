@@ -51,7 +51,7 @@ export default function EmployeePage() {
   const [employeesPerPage] = useState(10);
 
   // Helper function to verify token and handle authentication issues
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
@@ -91,7 +91,7 @@ export default function EmployeePage() {
       router.push("/login");
       return false;
     }
-  };
+  }, [router, toast]);
 
   const fetchOrganization = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -114,7 +114,7 @@ export default function EmployeePage() {
           error.response?.data?.detail || "Failed to fetch organization",
       });
     }
-  }, [orgId, toast]);
+  }, [orgId, toast, verifyToken]);
 
   const fetchMasterData = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -139,14 +139,14 @@ export default function EmployeePage() {
           error.response?.data?.detail || "Failed to fetch master data",
       });
     }
-  }, [orgId, toast]);
+  }, [orgId, toast, verifyToken]);
 
   const fetchEmployees = useCallback(async () => {
     if (!(await verifyToken())) return;
 
     try {
       const data = await AxiosGet(`list/?org_id=${orgId}`);
-      setEmployees(data);
+      setEmployees(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -154,8 +154,9 @@ export default function EmployeePage() {
         description:
           error.response?.data?.detail || "Failed to fetch employees",
       });
+      setEmployees([]); // Ensure employees is an array even on error
     }
-  }, [orgId, toast]);
+  }, [orgId, toast, verifyToken]);
 
   useEffect(() => {
     fetchOrganization();
@@ -202,7 +203,7 @@ export default function EmployeePage() {
       }
 
       // Send formatted data to backend
-      await AxiosPost("signup/", { ...formData });
+      await AxiosPost("employee/signup/", { ...formData });
 
       toast({
         title: "Success",
@@ -322,7 +323,7 @@ export default function EmployeePage() {
   };
 
   // Search and pagination logic
-  const filteredEmployees = employees.filter(
+  const filteredEmployees = (Array.isArray(employees) ? employees : []).filter(
     (employee) =>
       employee.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

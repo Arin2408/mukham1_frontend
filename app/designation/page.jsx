@@ -61,7 +61,7 @@ export default function DesignationPage() {
   const { orgId } = useAuth(); // Get orgId from AuthContext
 
   // Helper function to verify token and handle authentication issues
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
@@ -101,7 +101,7 @@ export default function DesignationPage() {
       router.push("/login");
       return false;
     }
-  };
+  }, [router, toast]);
 
   const fetchDesignations = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -117,7 +117,7 @@ export default function DesignationPage() {
           error.response?.data?.detail || "Failed to fetch designations",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   const fetchDepartments = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -139,7 +139,7 @@ export default function DesignationPage() {
           error.response?.data?.detail || "Failed to fetch departments",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   useEffect(() => {
     fetchDepartments();

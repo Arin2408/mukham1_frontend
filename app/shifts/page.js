@@ -65,7 +65,7 @@ export default function ShiftsPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Helper function to verify token and handle authentication issues
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
@@ -105,7 +105,7 @@ export default function ShiftsPage() {
       router.push("/login");
       return false;
     }
-  };
+  }, [router, toast]);
 
   const fetchDepartments = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -130,7 +130,7 @@ export default function ShiftsPage() {
         description: error.response?.data?.detail || "Failed to fetch departments",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   const fetchShifts = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -145,7 +145,7 @@ export default function ShiftsPage() {
         description: error.response?.data?.detail || "Failed to fetch shifts",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   useEffect(() => {
     fetchDepartments();

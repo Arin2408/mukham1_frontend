@@ -55,7 +55,7 @@ export default function DepartmentPage() {
   const { orgId } = useAuth(); // Get orgId from AuthContext
 
   // Helper function to verify token and handle authentication issues
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
@@ -95,7 +95,7 @@ export default function DepartmentPage() {
       router.push("/login");
       return false;
     }
-  };
+  }, [router, toast]);
 
   const fetchDepartments = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -111,7 +111,7 @@ export default function DepartmentPage() {
           error.response?.data?.detail || "Failed to fetch departments",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   const fetchOrganizations = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -133,7 +133,7 @@ export default function DepartmentPage() {
           error.response?.data?.detail || "Failed to fetch organizations",
       });
     }
-  }, [orgId, router, toast]);
+  }, [orgId, toast, verifyToken]);
 
   const fetchLocations = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -158,7 +158,7 @@ export default function DepartmentPage() {
           error.response?.data?.detail || "Failed to fetch locations",
       });
     }
-  }, [router, toast]);
+  }, [toast, verifyToken]);
 
   useEffect(() => {
     fetchOrganizations();

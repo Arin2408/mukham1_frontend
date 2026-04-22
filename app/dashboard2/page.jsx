@@ -377,7 +377,7 @@ export default function EmployeeDashboard() {
               0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-3">
-                  Today's Completed Shifts
+                Today&apos;s Completed Shifts
                 </h2>
                 <div className="grid grid-cols-1 gap-3">
                   {completedShifts

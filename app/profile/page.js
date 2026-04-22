@@ -32,7 +32,7 @@ export default function ProfilePage() {
 
 
   // Helper function to verify token and handle authentication issues
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       toast({
@@ -73,7 +73,7 @@ export default function ProfilePage() {
       router.push("/");
       return false;
     }
-  };
+  }, [router, toast]);
 
   const fetchOrganisationDetails = useCallback(async () => {
     if (!(await verifyToken())) return;
@@ -98,7 +98,7 @@ export default function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [orgId, router, toast]);
+  }, [orgId, toast, verifyToken]);
 
   useEffect(() => {
     fetchOrganisationDetails();
@@ -162,13 +162,13 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-  const checkAuth = async () => {
-    if (!(await verifyToken())) {
-      router.push("/");
-    }
-  };
-  checkAuth();
-}, [router]);
+    const checkAuth = async () => {
+      if (!(await verifyToken())) {
+        router.push("/");
+      }
+    };
+    checkAuth();
+  }, [router, verifyToken]);
 
 useEffect(() => {
   fetchOrganisationDetails();

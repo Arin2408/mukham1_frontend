@@ -16,7 +16,7 @@ export const useAuth = () => {
 };
 
 export const Axios = axios.create({
-  baseURL: "https://sahidahm.pythonanywhere.com/api/",
+  baseURL: "http://127.0.0.1:8000/api/",
 });
 
 export const AxiosPost = async (apiname, body, method = "post") => {
@@ -187,8 +187,8 @@ const AuthProvider = ({ children }) => {
     }
 
     try {
-      const { data } = await Axios.get("org/me/");
-      if (data.org_id) {
+      const { data } = await Axios.get("employee-details/");
+      if (data.user_id) {
         const formattedNumber = data.mobile_number.replace("+", "").trim();
         setUser({ mobile_number: formattedNumber, org_id: data.org_id });
       } else {

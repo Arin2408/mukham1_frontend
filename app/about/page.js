@@ -30,7 +30,7 @@ export default function AboutPage() {
           <div className="mx-auto max-w-2xl lg:text-center mb-16">
             <h2 className="text-3xl font-bold">Our Values</h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Built on principles that put your organization's success first
+              Built on principles that put your organization&apos;s success first
             </p>
           </div>
 
@@ -40,7 +40,7 @@ export default function AboutPage() {
                 <Shield className="h-12 w-12 text-primary mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Security First</h3>
                 <p className="text-muted-foreground">
-                  Enterprise-grade security measures to protect your organization's data
+                  Enterprise-grade security measures to protect your organization&apos;s data
                 </p>
               </Card>
 
