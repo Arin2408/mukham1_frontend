@@ -16,7 +16,7 @@ export const useAuth = () => {
 };
 
 export const Axios = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "http://127.0.0.1:8001/api/",
 });
 
 export const AxiosPost = async (apiname, body, method = "post") => {
@@ -79,22 +79,7 @@ Axios.interceptors.request.use(
   }
 );
 
-Axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.clear();
-      setUser(null);
-      router.push("/");
-      toast({
-        variant: "destructive",
-        title: "Session Expired",
-        description: "Please log in again.",
-      });
-    }
-    return Promise.reject(error);
-  }
-);
+// Moved interceptors inside the component to access hooks
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -102,6 +87,34 @@ const AuthProvider = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const interceptor = Axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // If we are already on a login page, don't trigger global redirect/clear
+          const path = typeof window !== "undefined" ? window.location.pathname : "";
+          const isEmbedded = typeof window !== "undefined" && window.self !== window.top;
+          if (path !== "/" && path !== "/member-login" && !isEmbedded) {
+            localStorage.clear();
+            setUser(null);
+            router.push("/");
+            toast({
+              variant: "destructive",
+              title: "Session Expired",
+              description: "Please log in again.",
+            });
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      Axios.interceptors.response.eject(interceptor);
+    };
+  }, [router, toast]);
 
   const loginUser = async ({ mobile_number, password }) => {
     setLoading(true);
@@ -125,7 +138,7 @@ const AuthProvider = ({ children }) => {
           description: "Redirecting to your dashboard...",
         });
 
-        router.push("/dashboard");
+        //router.push("/dashboard");
         return { success: true };
       } else {
         toast({
@@ -139,8 +152,8 @@ const AuthProvider = ({ children }) => {
       console.error("Axios Error:", err.response?.data || err.message);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Server error, please try again later.",
+        title: "Login failed",
+        description: err.response?.data?.error || "Invalid credentials",
       });
       return { success: false };
     } finally {
@@ -148,13 +161,68 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const registerUser = async ({ name, mobile_number }) => {
+  const loginMember = async ({ mobile_number, password }) => {
+    setLoading(true);
+    try {
+      const formattedNumber = mobile_number.replace("+", "").trim();
+
+      const { data } = await Axios.post("member/login/", {
+        mobile_number: formattedNumber,
+        password,
+      });
+
+      if (data.access_token) {
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("refresh_token", data.refresh_token);
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("user_mobile", formattedNumber);
+
+        const profile = data.profile || {};
+        const userName = profile.first_name ? `${profile.first_name} ${profile.last_name || ''}` : null;
+
+        setUser({ 
+          mobile_number: formattedNumber, 
+          user_id: data.user_id,
+          name: userName,
+          profile: profile
+        });
+
+        toast({
+          title: "Member Login successful",
+          description: `Welcome back, ${userName || 'Member'}`,
+        });
+
+        return { success: true, is_registered: data.is_registered };
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: data.error || "Invalid credentials",
+        });
+        return { success: false };
+      }
+    } catch (err) {
+      console.error("Axios Error:", err.response?.data || err.message);
+      const serverError = err.response?.data?.error || "Invalid credentials";
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: serverError,
+      });
+      return { success: false, message: serverError };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerUser = async ({ name, mobile_number, email }) => {
     try {
       const formattedNumber = mobile_number.replace("+", "").trim();
 
       const { data } = await Axios.post("org/signup/", {
         name,
         mobile_number: formattedNumber,
+        email,
       });
 
       if (data.generated_password) {
@@ -182,6 +250,17 @@ const AuthProvider = ({ children }) => {
       setUser(null);
       setLoading(false);
       setAuthChecked(true);
+      
+      // Allow access to /member, /dashboard2, and /profile without redirecting to login for now
+      if (typeof window !== "undefined") {
+        const path = window.location.pathname;
+        if (path === "/member" || path === "/member-login" || path === "/dashboard2" || path === "/profile" || path === "/reset-password" || window.self !== window.top) {
+          setLoading(false);
+          setAuthChecked(true);
+          return;
+        }
+      }
+      
       router.push("/");
       return;
     }
@@ -189,17 +268,38 @@ const AuthProvider = ({ children }) => {
     try {
       const { data } = await Axios.get("employee-details/");
       if (data.user_id) {
-        const formattedNumber = data.mobile_number.replace("+", "").trim();
-        setUser({ mobile_number: formattedNumber, org_id: data.org_id });
+        const formattedNumber = data.mobile_number ? data.mobile_number.replace("+", "").trim() : "";
+        const profile = data.profile || {};
+        const userName = profile.first_name ? `${profile.first_name} ${profile.last_name || ''}` : null;
+        
+        setUser({ 
+          mobile_number: formattedNumber, 
+          org_id: data.org_id,
+          user_id: data.user_id,
+          name: userName,
+          profile: profile
+        });
       } else {
         localStorage.clear();
         setUser(null);
+        if (typeof window !== "undefined") {
+          const path = window.location.pathname;
+          if (path === "/member" || path === "/member-login" || path === "/dashboard2" || path === "/profile" || path === "/reset-password" || window.self !== window.top) {
+            return;
+          }
+        }
         router.push("/");
       }
     } catch (error) {
       console.error("Error checking login status:", error);
       localStorage.clear();
       setUser(null);
+      if (typeof window !== "undefined") {
+        const path = window.location.pathname;
+        if (path === "/member" || path === "/member-login" || path === "/dashboard2" || path === "/profile" || path === "/reset-password" || window.self !== window.top) {
+          return;
+        }
+      }
       router.push("/");
     } finally {
       setLoading(false);
@@ -263,6 +363,7 @@ const AuthProvider = ({ children }) => {
       value={{
         user,
         loginUser,
+        loginMember,
         logoutUser,
         registerUser,
         AxiosPost,

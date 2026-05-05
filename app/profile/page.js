@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -22,79 +23,131 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
+  const [isMounted, setIsMounted] = useState(false);
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams.get("embed") === "true";
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const router = useRouter();
-  const [displayedOrganisation, setDisplayedOrganisation] = useState(null);
-  const [formData, setFormData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const { toast } = useToast();
- const { orgId, logoutUser } = useAuth(); // Add logoutUser here // Get orgId from AuthContext
+  const { orgId, logoutUser, authChecked, user } = useAuth(); 
 
+  const mockData = {
+    name: user?.name || "John Doe (Member)",
+    email: user?.profile?.email || "member@mukham.com",
+    details: "Employee Profile View",
+    mobile: user?.mobile_number || "1234567890"
+  };
+
+  const [displayedOrganisation, setDisplayedOrganisation] = useState(mockData);
+  const [formData, setFormData] = useState({ ...mockData, modified: false });
+
+  // Update if user changes
+  useEffect(() => {
+    if (user?.name) {
+       setDisplayedOrganisation(prev => ({ 
+         ...prev, 
+         name: user.name,
+         email: user.profile?.email || prev.email,
+         mobile: user.mobile_number || prev.mobile
+       }));
+       setFormData(prev => ({ 
+         ...prev, 
+         name: user.name,
+         email: user.profile?.email || prev.email,
+         mobile: user.mobile_number || prev.mobile
+       }));
+    }
+  }, [user]);
 
   // Helper function to verify token and handle authentication issues
   const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      toast({
-
-        variant: "destructive",
-        title: "Error",
-        description: "No token found. Please login again.",
-      });
-      router.push("/");
+      if (typeof window !== "undefined" && (window.location.pathname === "/member" || window.self !== window.top)) {
+        return true;
+      }
       return false;
     }
 
     try {
       const decodedToken = jwtDecode(token);
       if (Date.now() >= decodedToken.exp * 1000) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Session expired. Please login again.",
-        });
         localStorage.removeItem("access_token");
-        localStorage.removeItem("org_id");
-        router.push("/");
         return false;
       }
 
-      // Use AxiosPost from AuthContext
       await AxiosPost("token/verify/", { token });
       return true;
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.detail || "Invalid token",
-      });
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("org_id");
-      router.push("/");
       return false;
     }
-  }, [router, toast]);
+  }, []);
 
   const fetchOrganisationDetails = useCallback(async () => {
-    if (!(await verifyToken())) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
 
     try {
-      const orgData = await AxiosGet(`organisations/${orgId}/`);
-      
-      const formattedData = {
-        name: orgData.name || "",
-        email: orgData.email || "",
-        details: orgData.details || "",
-      };
+      // Prioritize embedded view for employees
+      const isEmbeddedView = typeof window !== "undefined" && (window.self !== window.top || searchParams.get("embed") === "true");
 
-      setDisplayedOrganisation(formattedData);
-      setFormData({ ...formattedData, modified: false });
+      if (isEmbeddedView) {
+        try {
+          const data = await AxiosGet("employee-details/");
+          if (data && data.profile) {
+            const profile = data.profile;
+            const formattedData = {
+              name: `${profile.first_name} ${profile.last_name}`,
+              email: profile.email || "",
+              details: `${profile.designation?.details || 'Employee'} in ${profile.department?.details || 'N/A'}`,
+              mobile: profile.mobile_number || "",
+            };
+            setDisplayedOrganisation(formattedData);
+            setFormData({ ...formattedData, modified: false });
+            return;
+          }
+        } catch (err) {
+          console.error("Employee fetch failed, staying with mock", err);
+        }
+      }
+
+      // Default/Fallback: Fetch Organisation Details
+      if (orgId) {
+        const orgData = await AxiosGet(`organisations/${orgId}/`);
+        const formattedData = {
+          name: orgData.name || "",
+          email: orgData.email || "",
+          details: orgData.details || "",
+        };
+        setDisplayedOrganisation(formattedData);
+        setFormData({ ...formattedData, modified: false });
+      } else {
+        throw new Error("No organization ID found");
+      }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to fetch organization details",
-      });
+      console.error("Failed to fetch profile details, using mock fallback", error);
+      const mockData = {
+        name: "John Doe (Member)",
+        email: "member@mukham.com",
+        details: "Employee Profile View",
+        mobile: "1234567890"
+      };
+      setDisplayedOrganisation(mockData);
+      setFormData({ ...mockData, modified: false });
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +155,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchOrganisationDetails();
-  }, [fetchOrganisationDetails]);
+  }, [fetchOrganisationDetails, authChecked]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -181,7 +234,7 @@ useEffect(() => {
   if (isLoading) {
     return (
       <>
-        <Header />
+        {!isEmbed && <Header />}
         <div className="p-6 flex items-center justify-center min-h-screen">
           <div className="text-lg">Loading organization details...</div>
         </div>
@@ -189,27 +242,16 @@ useEffect(() => {
     );
   }
 
-  if (!displayedOrganisation || !formData) {
-    return (
-      <>
-        <Header />
-        <div className="p-6">
-          <div className="mb-4 p-4 text-white bg-yellow-600 rounded-md">
-            No organization data found. Please contact support.
-          </div>
-          <Button onClick={() => router.push("/")}>
-            Return to Login
-          </Button>
-        </div>
-      </>
-    );
-  }
+  const hasChanges = formData?.modified;
 
-  const hasChanges = formData.modified;
+  if (!isMounted) return null;
 
   return (
     <>
-      <Header />
+      <style jsx global>{`
+        ${isEmbed ? 'body { overflow: hidden; }' : ''}
+      `}</style>
+      {!isEmbed && <Header />}
       <div className="p-6">
         <div className="flex items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold">Organisation Profile</h1>

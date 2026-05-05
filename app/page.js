@@ -23,7 +23,7 @@ export default function Home() {
                   Login as Organization
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/member-login">
                 <Button size="lg">
                   Login as Member
                 </Button>

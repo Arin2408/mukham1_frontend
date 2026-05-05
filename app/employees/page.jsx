@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
+import { AxiosPost, AxiosGet, AxiosPut, AxiosDelete, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,14 +188,26 @@ export default function EmployeePage() {
     setIsSubmitting(true);
 
     try {
-      // Ensure the number is numeric
-      const mobileNumber = formData.mobile_number;
-
-      if (!/^\d{10}$/.test(mobileNumber)) {
-        throw new Error(
-          "Please enter a valid 10-digit mobile number (e.g., 9876545678)."
-        );
+      // Clean and validate the mobile number
+      let mobileNumber = formData.mobile_number.replace(/\D/g, "");
+      if (mobileNumber.length > 10) {
+        mobileNumber = mobileNumber.slice(-10); // Take last 10 digits
       }
+
+      // Validate org context
+      if (!orgId) {
+        throw new Error("Organization ID is missing. Please try logging out and logging in again.");
+      }
+
+      // Update formData with the cleaned number and org context
+      const submissionData = { 
+        ...formData, 
+        mobile_number: mobileNumber,
+        organisation: orgId,
+        org_id: orgId 
+      };
+
+      console.log('DEBUG FINAL DATA:', submissionData);
 
       // Validate email
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -203,11 +215,11 @@ export default function EmployeePage() {
       }
 
       // Send formatted data to backend
-      await AxiosPost("employee/signup/", { ...formData });
-
+      console.log('DEBUG SUBMITTING:', submissionData);
+      const res = await AxiosPost("employee/signup/", submissionData);
       toast({
         title: "Success",
-        description: "Employee added successfully!",
+        description: `Employee added! Password: ${res.member_member_password || res.member_password}`,
       });
 
       // Reset form fields
@@ -226,13 +238,26 @@ export default function EmployeePage() {
 
       fetchEmployees();
     } catch (error) {
+      console.error("Employee signup error:", error.response?.data || error.message);
+      
+      let errorDetail = "Failed to add employee";
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object') {
+          // Flatten the error object to a string
+          errorDetail = Object.entries(error.response.data)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(' ') : messages}`)
+            .join(' | ');
+        } else {
+          errorDetail = error.response.data;
+        }
+      } else if (error.message) {
+        errorDetail = error.message;
+      }
+
       toast({
         variant: "destructive",
         title: "Error",
-        description:
-          error.response?.data?.detail ||
-          error.message ||
-          "Failed to add employee",
+        description: errorDetail,
       });
     } finally {
       setIsSubmitting(false);
@@ -366,6 +391,8 @@ export default function EmployeePage() {
     const loc = locations.find((l) => String(l.location_id) === String(id));
     return loc?.location_name || "N/A";
   };
+
+
 
   return (
     <>
@@ -558,10 +585,16 @@ export default function EmployeePage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Adding..." : "Add Employee"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" className="w-full bg-blue-700 hover:bg-blue-800" disabled={isSubmitting}>
+                  {isSubmitting ? "Adding..." : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add Employee
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </Card>
 

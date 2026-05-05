@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { AxiosGet, AxiosPost, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Webcam from "react-webcam";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Building2,
   Clock,
@@ -13,6 +23,9 @@ import {
   CheckCircle2,
   Timer,
   ChevronDown,
+  MapPin,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import {
@@ -32,60 +45,124 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Mock employee data - would come from API in real app
-const employeeData = {
+// Employee data is fetched from the API inside the DashboardContent component
+
+export default function EmployeeDashboard() {
+  const [currentTime, setCurrentTime] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedShift, setSelectedShift] = useState(null);
+  const [activeShifts, setActiveShifts] = useState({});
+  const [completedShifts, setCompletedShifts] = useState([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStep, setVerificationStep] = useState('none');
+  const [verificationDistance, setVerificationDistance] = useState(null);
+  const webcamRef = useRef(null);
+  const [error, setError] = useState(null);
+  
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent 
+        currentTime={currentTime} 
+        setCurrentTime={setCurrentTime}
+        isMounted={isMounted}
+        setIsMounted={setIsMounted}
+        selectedShift={selectedShift}
+        setSelectedShift={setSelectedShift}
+        activeShifts={activeShifts}
+        setActiveShifts={setActiveShifts}
+        completedShifts={completedShifts}
+        setCompletedShifts={setCompletedShifts}
+        isVerifying={isVerifying}
+        setIsVerifying={setIsVerifying}
+        verificationStep={verificationStep}
+        setVerificationStep={setVerificationStep}
+        verificationDistance={verificationDistance}
+        setVerificationDistance={setVerificationDistance}
+        webcamRef={webcamRef}
+        error={error}
+        setError={setError}
+      />
+    </Suspense>
+  );
+}
+
+const mockEmployeeData = {
   id: "EMP001",
   name: "John Doe",
   department: "Engineering",
   designation: "Senior Developer",
   availableShifts: [
-    {
-      id: "shift1",
-      name: "Morning Shift",
-      startTime: "09:00",
-      endTime: "12:00",
-    },
-    {
-      id: "shift2",
-      name: "Afternoon Shift",
-      startTime: "13:00",
-      endTime: "16:00",
-    },
-    {
-      id: "shift3",
-      name: "Evening Shift",
-      startTime: "17:00",
-      endTime: "23:00",
-    },
+    { id: "shift1", name: "Morning Shift", startTime: "09:00", endTime: "12:00" },
+    { id: "shift2", name: "Afternoon Shift", startTime: "13:00", endTime: "16:00" },
+    { id: "shift3", name: "Evening Shift", startTime: "17:00", endTime: "23:00" },
   ],
   attendanceHistory: [
     { date: "Feb 24", shift: "Morning Shift", status: "On Time", hours: 3 },
-    { date: "Feb 24", shift: "Afternoon Shift", status: "On Time", hours: 3 },
-    {
-      date: "Feb 25",
-      shift: "Morning Shift",
-      status: "Late (15m)",
-      hours: 2.75,
-    },
-    {
-      date: "Feb 26",
-      shift: "Morning Shift",
-      status: "Early (10m)",
-      hours: 3.2,
-    },
-    { date: "Feb 27", shift: "Afternoon Shift", status: "On Time", hours: 3 },
-    { date: "Mar 01", shift: "Morning Shift", status: "Late (5m)", hours: 2.9 },
   ],
 };
 
-export default function EmployeeDashboard() {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedShift, setSelectedShift] = useState(null);
-  const [activeShifts, setActiveShifts] = useState({});
-  const [completedShifts, setCompletedShifts] = useState([]);
+function DashboardContent({ 
+  currentTime, setCurrentTime, isMounted, setIsMounted,
+  selectedShift, setSelectedShift, activeShifts, setActiveShifts,
+  completedShifts, setCompletedShifts,
+  isVerifying, setIsVerifying, verificationStep, setVerificationStep,
+  verificationDistance, setVerificationDistance, webcamRef, error, setError
+}) {
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams.get("embed") === "true";
+  const { authChecked, user } = useAuth();
+  
+  // Initialize with mock data, but use the auth user name if available
+  const [employeeData, setEmployeeData] = useState({
+    ...mockEmployeeData,
+    name: user?.name || mockEmployeeData.name
+  });
+
+  // Update name if user state changes
+  useEffect(() => {
+    if (user?.name) {
+      setEmployeeData(prev => ({ ...prev, name: user.name }));
+    }
+  }, [user]);
+
+  // Fetch real employee data - silent fallback to mock if fails
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+
+      try {
+        const data = await AxiosGet("employee-details/");
+        if (data && data.profile) {
+          const profile = data.profile;
+          setEmployeeData({
+            id: `EMP${profile.user_id || '---'}`,
+            name: `${profile.first_name} ${profile.last_name}`,
+            department: profile.department?.details || "N/A",
+            designation: profile.designation?.details || "N/A",
+            availableShifts: profile.shift ? [
+               {
+                 id: profile.shift.shift_id,
+                 name: profile.shift.shift_name,
+                 startTime: profile.shift.shift_start_time,
+                 endTime: profile.shift.shift_end_time
+               }
+            ] : mockEmployeeData.availableShifts,
+            attendanceHistory: mockEmployeeData.attendanceHistory,
+            office_location: profile.office_location
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch employee details, staying with mock data", error);
+      }
+    };
+    if (authChecked) fetchProfile();
+  }, [authChecked]);
 
   // Update current time every minute
   useEffect(() => {
+    setIsMounted(true);
+    setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
@@ -95,6 +172,7 @@ export default function EmployeeDashboard() {
 
   // Format time as HH:MM
   const formatTime = (date) => {
+    if (!date) return "--:--";
     return date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -104,11 +182,13 @@ export default function EmployeeDashboard() {
 
   // Format date as MMM DD (e.g. Mar 02)
   const formatDate = (date) => {
+    if (!date) return "";
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   // Parse time string to get hours and minutes
   const parseTime = (timeStr) => {
+    if (!timeStr) return { hours: 0, minutes: 0 };
     const [hours, minutes] = timeStr.split(":").map(Number);
     return { hours, minutes };
   };
@@ -136,85 +216,192 @@ export default function EmployeeDashboard() {
     return now < cutoffTime && !isCompleted;
   };
 
-  // Check if attendance marking is early/late/on-time
-  const getAttendanceStatus = (shift) => {
-    if (!shift) return null;
+  // Haversine distance formula
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    const now = currentTime;
-    const { hours: startHours, minutes: startMinutes } = parseTime(
-      shift.startTime
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // in metres
+  };
+
+
+
+  // Handle marking attendance (Start Shift)
+  const handleMarkAttendance = async () => {
+    if (!canStartShift(selectedShift)) return;
+    
+    setIsVerifying(true);
+    setVerificationStep('location');
+    setVerificationDistance(null);
+    setError(null);
+
+    // 1. Get GPS Location
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      setIsVerifying(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const officeLat = parseFloat(employeeData.office_location?.latitude);
+        const officeLon = parseFloat(employeeData.office_location?.longitude);
+
+        if (isNaN(officeLat) || isNaN(officeLon)) {
+          setError(`Office location not set. Your Current coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+          // DO NOT close modal, let user see the error
+          return;
+        }
+
+        const distance = calculateDistance(latitude, longitude, officeLat, officeLon);
+        setVerificationDistance(distance);
+        const isInside = distance <= 100;
+
+        if (!isInside) {
+          // 2. Geofence Check Failed
+          setError(`Location Mismatch: You are ${distance.toFixed(0)}m away from the office. (Allowed: 100m)`);
+          // Record outside attempt
+          await submitAttendance('outside', 'skipped', true);
+          return;
+        }
+
+        // 3. Geofence Check Passed -> Check if we actually have a face registered
+        try {
+          const mobile = user?.mobile_number || localStorage.getItem("user_mobile");
+          const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
+          const { data: faceData } = await Axios.post("face/check-status/", { mobile_number: cleanMobile });
+          
+          if (!faceData.is_face_registered) {
+            setError("No face registered. Please register your face in the profile settings first.");
+            return;
+          }
+        } catch (err) {
+          console.warn("Face status check failed, proceeding anyway", err);
+        }
+
+        // Proceed to Face Verification UI
+        setVerificationStep('face');
+      },
+      (err) => {
+        setError(`Location Error: ${err.message}. Please ensure GPS is ON and you have allowed location permissions.`);
+        setIsVerifying(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
 
-    const shiftStart = new Date(now);
-    shiftStart.setHours(startHours, startMinutes, 0, 0);
+  const captureAndVerify = async () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (!imageSrc) {
+      setError("Failed to capture image. Please check camera permissions.");
+      return;
+    }
 
-    if (now < shiftStart) {
-      const minutesDiff = Math.round((shiftStart - now) / 60000);
-      return { type: "Early", minutes: minutesDiff };
-    } else if (now > shiftStart) {
-      const minutesDiff = Math.round((now - shiftStart) / 60000);
-      return { type: "Late", minutes: minutesDiff };
-    } else {
-      return { type: "On Time", minutes: 0 };
+    setVerificationStep('submitting');
+    setError(null);
+    
+    try {
+      const mobile = user?.mobile_number || localStorage.getItem("user_mobile");
+      if (!mobile) {
+        setError("Error: User mobile number not found. Please log in again.");
+        return;
+      }
+      
+      const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
+      const res = await AxiosPost("face/verify/", {
+        mobile_number: cleanMobile,
+        face_image_base64: imageSrc.split(',')[1] // Just the base64 part
+      });
+
+      if (res.verified && res.confidence >= 90) {
+        await submitAttendance('inside', 'verified');
+      } else {
+        setError(`Face verification failed (Confidence: ${res.confidence?.toFixed(1)}%). Please try again.`);
+        await submitAttendance('inside', 'failed', true);
+      }
+    } catch (err) {
+      console.error("Face verification error:", err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || "Connection error";
+      setError(`Face verification failed: ${errorMsg}`);
+      await submitAttendance('inside', 'failed', true);
     }
   };
 
-  // Handle marking attendance
-  const handleMarkAttendance = () => {
-    if (!canStartShift(selectedShift)) return;
+  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false) => {
+    try {
+      const res = await AxiosPost("mark-attendance/", {
+        location_status: locationStatus,
+        face_status: faceStatus
+      });
 
-    const status = getAttendanceStatus(selectedShift);
+      // Update local state
+      setEmployeeData(prev => ({
+        ...prev,
+        attendanceHistory: [
+          { 
+            date: formatDate(new Date()), 
+            shift: selectedShift.name, 
+            status: res.status, 
+            hours: 0 
+          },
+          ...prev.attendanceHistory
+        ]
+      }));
 
-    setActiveShifts((prev) => ({
-      ...prev,
-      [selectedShift.id]: {
-        shift: selectedShift,
-        startTime: new Date(),
-        status,
-      },
-    }));
+      setActiveShifts(prev => ({
+        ...prev,
+        [selectedShift.id]: {
+          shift: selectedShift,
+          startTime: new Date(res.check_in),
+          status: { type: res.status, minutes: 0 }
+        }
+      }));
 
-    // Clear selected shift after starting
-    setSelectedShift(null);
+      if (!stayOpen) {
+        setVerificationStep('success');
+        setTimeout(() => setIsVerifying(false), 2000);
+      }
+    } catch (err) {
+      setError("Failed to record: " + (err.response?.data?.error || err.message));
+    } finally {
+      if (!stayOpen) {
+        // Only set to none if we're closing
+        setTimeout(() => setVerificationStep('none'), 2500);
+      }
+    }
   };
 
   // Handle ending shift
-  const handleEndShift = (shiftId) => {
-    const shiftInfo = activeShifts[shiftId];
-    if (!shiftInfo) return;
-
-    const endTime = new Date();
-    const hours = ((endTime - shiftInfo.startTime) / (1000 * 60 * 60)).toFixed(
-      2
-    );
-
-    // Format the status string
-    let statusStr = "On Time";
-    if (shiftInfo.status.type !== "On Time") {
-      statusStr = `${shiftInfo.status.type} (${shiftInfo.status.minutes}m)`;
+  const handleEndShift = async (shiftId) => {
+    try {
+      setError(null);
+      await AxiosPost("mark-attendance/", {});
+      // Refresh local state instead of reload
+      setActiveShifts(prev => {
+        const next = { ...prev };
+        delete next[shiftId];
+        return next;
+      });
+      toast({ title: "Shift Ended", description: "Your attendance has been recorded." });
+    } catch (err) {
+      setError("Failed to end shift: " + (err.response?.data?.error || err.message));
     }
-
-    const completedShift = {
-      id: shiftId,
-      shift: shiftInfo.shift.name,
-      date: formatDate(endTime),
-      status: statusStr,
-      hours: parseFloat(hours),
-    };
-
-    setCompletedShifts((prev) => [completedShift, ...prev]);
-
-    // Remove from active shifts
-    const newActiveShifts = { ...activeShifts };
-    delete newActiveShifts[shiftId];
-    setActiveShifts(newActiveShifts);
   };
 
   // Get today's date
   const today = formatDate(currentTime);
 
   // Filter available shifts (not active, not completed today)
-  const availableShiftsForSelection = employeeData.availableShifts.filter(
+  const availableShiftsForSelection = employeeData?.availableShifts?.filter(
     (shift) => {
       // Check if shift is already active
       if (activeShifts[shift.id]) return false;
@@ -224,27 +411,42 @@ export default function EmployeeDashboard() {
         completedShifts.some(
           (cs) => cs.shift === shift.name && cs.date === today
         ) ||
-        employeeData.attendanceHistory.some(
+        (employeeData?.attendanceHistory || []).some(
           (record) => record.shift === shift.name && record.date === today
         );
 
       return !isCompletedToday;
     }
-  );
+  ) || [];
 
   return (
     <>
-      <Header />
+      <style jsx global>{`
+        ${isEmbed ? 'body { overflow: hidden; }' : ''}
+      `}</style>
+      
+      {/* Aggressive hide: Only show header if NOT embedded and IS mounted */}
+      {isMounted && !isEmbed && <Header />}
+      
       <div className="p-6 space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Employee Dashboard</h1>
-          <div className="text-right">
-            <p className="text-lg font-medium">{employeeData.name}</p>
-            <p className="text-sm text-muted-foreground">
-              ID: {employeeData.id}
-            </p>
+        {!isMounted ? (
+          <div className="min-h-[400px] flex items-center justify-center">
+            <div className="text-center space-y-4">
+               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+               <p className="text-muted-foreground animate-pulse">Initializing dashboard...</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold">Employee Dashboard</h1>
+              <div className="text-right">
+                <p className="text-lg font-medium">{employeeData.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  ID: {employeeData.id}
+                </p>
+              </div>
+            </div>
 
         {/* Current Time and Shift Selection */}
         <Card className="p-6 bg-primary/5">
@@ -254,15 +456,15 @@ export default function EmployeeDashboard() {
                 <h2 className="text-xl font-semibold mb-2">Current Time</h2>
                 <div className="text-3xl font-bold flex items-center gap-2">
                   <Clock className="h-6 w-6" />
-                  {formatTime(currentTime)}
+                  {isMounted && currentTime ? formatTime(currentTime) : "--:--"}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {currentTime.toLocaleDateString([], {
+                  {isMounted && currentTime ? currentTime.toLocaleDateString([], {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  })}
+                  }) : "Loading date..."}
                 </p>
               </div>
 
@@ -298,10 +500,14 @@ export default function EmployeeDashboard() {
 
                   <Button
                     onClick={handleMarkAttendance}
-                    disabled={!canStartShift(selectedShift)}
+                    disabled={!canStartShift(selectedShift) || isVerifying}
                   >
-                    <CheckCircle2 className="mr-2 h-5 w-5" />
-                    Start Shift
+                    {isVerifying ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <MapPin className="mr-2 h-5 w-5" />
+                    )}
+                    {isVerifying ? "Verifying..." : "Start Shift"}
                   </Button>
                 </div>
 
@@ -539,6 +745,86 @@ export default function EmployeeDashboard() {
               ))}
           </div>
         </Card>
+          </>
+        )}
+        {/* Verification Modal */}
+        <Dialog open={isVerifying} onOpenChange={(open) => !open && setIsVerifying(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Attendance Verification</DialogTitle>
+              <DialogDescription>
+                Please wait while we verify your identity and location.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center p-6 space-y-6">
+              {error && (
+                <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive animate-in fade-in zoom-in duration-300">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              )}
+              {verificationStep === 'location' && (
+                <div className="text-center space-y-4">
+                  <div className="relative">
+                    <MapPin className="h-16 w-16 text-primary animate-bounce mx-auto" />
+                    <Loader2 className="h-20 w-20 text-primary/20 animate-spin absolute -top-2 -left-2" />
+                  </div>
+                  <p className="font-medium">Checking GPS Location...</p>
+                  <p className="text-sm text-muted-foreground">
+                    {verificationDistance !== null 
+                      ? `Distance: ${verificationDistance.toFixed(0)}m (Max: 100m)`
+                      : "Verifying geofence (100m radius)"}
+                  </p>
+                  {error && (
+                    <Button variant="outline" size="sm" onClick={() => setIsVerifying(false)}>
+                      Close & Fix Location
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {verificationStep === 'success' && (
+                <div className="text-center space-y-4 animate-in zoom-in duration-500">
+                  <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="h-12 w-12 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-700">Attendance Marked!</h3>
+                  <p className="text-muted-foreground">Shift started successfully.</p>
+                </div>
+              )}
+
+              {verificationStep === 'face' && (
+                <div className="text-center space-y-4 w-full">
+                  <div className="relative rounded-2xl overflow-hidden border-4 border-primary/20 shadow-2xl bg-black aspect-video">
+                    <Webcam
+                      audio={false}
+                      ref={webcamRef}
+                      screenshotFormat="image/jpeg"
+                      className="w-full h-full object-cover"
+                      videoConstraints={{ facingMode: "user" }}
+                    />
+                    <div className="absolute inset-0 border-[20px] border-black/40 pointer-events-none rounded-full scale-110"></div>
+                  </div>
+                  <p className="font-medium flex items-center justify-center gap-2">
+                    <Camera className="h-5 w-5 text-primary" />
+                    Position your face in the center
+                  </p>
+                  <Button onClick={captureAndVerify} className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20">
+                    Capture & Verify
+                  </Button>
+                </div>
+              )}
+
+              {verificationStep === 'submitting' && (
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto" />
+                  <p className="font-medium">Finalizing Attendance...</p>
+                  <p className="text-sm text-muted-foreground">This will only take a moment</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

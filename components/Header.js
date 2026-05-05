@@ -4,10 +4,21 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, Home } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 
 export function Header() {
+  const [isEmbedded, setIsEmbedded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('embed') === 'true' || window.self !== window.top;
+    }
+    return false;
+  })
   const pathname = usePathname()
   const router = useRouter()
+
+  if (isEmbedded) return null;
+
   const showBackButton = pathname !== "/" && pathname !== "/dashboard"
 
   return (

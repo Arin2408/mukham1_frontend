@@ -58,6 +58,7 @@ export default function LoginPage() {
           title: "Login successful",
           description: "Redirecting to your dashboard...",
         });
+        router.push("/dashboard");
       } else {
         toast({
           variant: "destructive",
