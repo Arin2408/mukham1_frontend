@@ -28,6 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
 import {
   BarChart,
   Bar,
@@ -44,6 +45,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const tooltipStyle = {
+  contentStyle: {
+    backgroundColor: '#11141b',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px',
+    padding: '8px',
+    fontSize: '12px'
+  },
+  itemStyle: { color: '#fff' },
+  cursor: { fill: 'rgba(255,255,255,0.05)' }
+};
 
 // Employee data is fetched from the API inside the DashboardContent component
 
@@ -86,19 +99,13 @@ export default function EmployeeDashboard() {
   );
 }
 
-const mockEmployeeData = {
-  id: "EMP001",
-  name: "John Doe",
-  department: "Engineering",
-  designation: "Senior Developer",
-  availableShifts: [
-    { id: "shift1", name: "Morning Shift", startTime: "09:00", endTime: "12:00" },
-    { id: "shift2", name: "Afternoon Shift", startTime: "13:00", endTime: "16:00" },
-    { id: "shift3", name: "Evening Shift", startTime: "17:00", endTime: "23:00" },
-  ],
-  attendanceHistory: [
-    { date: "Feb 24", shift: "Morning Shift", status: "On Time", hours: 3 },
-  ],
+const emptyEmployeeData = {
+  id: "---",
+  name: "Loading...",
+  department: "---",
+  designation: "---",
+  availableShifts: [],
+  attendanceHistory: [],
 };
 
 function DashboardContent({ 
@@ -112,10 +119,9 @@ function DashboardContent({
   const isEmbed = searchParams.get("embed") === "true";
   const { authChecked, user } = useAuth();
   
-  // Initialize with mock data, but use the auth user name if available
   const [employeeData, setEmployeeData] = useState({
-    ...mockEmployeeData,
-    name: user?.name || mockEmployeeData.name
+    ...emptyEmployeeData,
+    name: user?.name || emptyEmployeeData.name
   });
 
   // Update name if user state changes
@@ -147,8 +153,8 @@ function DashboardContent({
                  startTime: profile.shift.shift_start_time,
                  endTime: profile.shift.shift_end_time
                }
-            ] : mockEmployeeData.availableShifts,
-            attendanceHistory: mockEmployeeData.attendanceHistory,
+            ] : [],
+            attendanceHistory: [],
             office_location: profile.office_location
           });
         }
@@ -419,413 +425,262 @@ function DashboardContent({
     }
   ) || [];
 
+  if (!isMounted) {
+    return <div className="min-h-screen bg-[#0b0e14]" />;
+  }
+
   return (
-    <>
-      <style jsx global>{`
-        ${isEmbed ? 'body { overflow: hidden; }' : ''}
-      `}</style>
+    <div className="min-h-screen bg-[#0b0e14] text-white selection:bg-primary/30 flex">
+      <Sidebar />
       
-      {/* Aggressive hide: Only show header if NOT embedded and IS mounted */}
-      {isMounted && !isEmbed && <Header />}
-      
-      <div className="p-6 space-y-8">
+      <div className="flex-1 lg:ml-64 ml-0 p-4 lg:p-10 space-y-8 relative z-10 max-w-[1600px] mx-auto w-full">
         {!isMounted ? (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center space-y-4">
                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-               <p className="text-muted-foreground animate-pulse">Initializing dashboard...</p>
+               <p className="text-muted-foreground animate-pulse">Initializing Command Center...</p>
             </div>
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold">Employee Dashboard</h1>
-              <div className="text-right">
-                <p className="text-lg font-medium">{employeeData.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  ID: {employeeData.id}
-                </p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold tracking-tight text-white">Member Dashboard</h1>
+                <p className="text-muted-foreground text-sm">Welcome back, {employeeData.name.split(' ')[0]}. Here is your status.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
+                   <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Session</span>
+                 </div>
               </div>
             </div>
 
-        {/* Current Time and Shift Selection */}
-        <Card className="p-6 bg-primary/5">
-          <div className="flex flex-col space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Current Time</h2>
-                <div className="text-3xl font-bold flex items-center gap-2">
-                  <Clock className="h-6 w-6" />
-                  {isMounted && currentTime ? formatTime(currentTime) : "--:--"}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isMounted && currentTime ? currentTime.toLocaleDateString([], {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }) : "Loading date..."}
-                </p>
-              </div>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               <Card className="quantanex-card p-6 flex flex-col justify-center items-center text-center relative overflow-hidden group">
+                  <div className="absolute inset-0 sparkline-blue opacity-20" />
+                  <div className="relative z-10">
+                    <h2 className="text-4xl font-black text-white tracking-tighter mb-1">
+                      {isMounted && currentTime ? formatTime(currentTime) : "--:--"}
+                    </h2>
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                      {isMounted && currentTime ? currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : "---"}
+                    </p>
+                  </div>
+               </Card>
 
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Select Shift</h2>
-                <div className="flex items-center gap-3">
-                  <Select
-                    value={selectedShift?.id}
-                    onValueChange={(value) => {
-                      const shift = employeeData.availableShifts.find(
-                        (s) => s.id === value
-                      );
-                      setSelectedShift(shift);
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a shift" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableShiftsForSelection.length > 0 ? (
-                        availableShiftsForSelection.map((shift) => (
-                          <SelectItem key={shift.id} value={shift.id}>
-                            {shift.name} ({shift.startTime} - {shift.endTime})
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="none" disabled>
-                          No shifts available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-
-                  <Button
-                    onClick={handleMarkAttendance}
-                    disabled={!canStartShift(selectedShift) || isVerifying}
-                  >
-                    {isVerifying ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <MapPin className="mr-2 h-5 w-5" />
-                    )}
-                    {isVerifying ? "Verifying..." : "Start Shift"}
-                  </Button>
-                </div>
-
-                {selectedShift && !canStartShift(selectedShift) && (
-                  <p className="text-red-500 flex items-center gap-1 mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {completedShifts.some(
-                      (cs) => cs.id === selectedShift.id && cs.date === today
-                    )
-                      ? "This shift has already been completed today"
-                      : `Shift can only be started before ${selectedShift.endTime}`}
-                  </p>
-                )}
-
-                {availableShiftsForSelection.length === 0 && (
-                  <p className="text-amber-600 flex items-center gap-1 mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    No shifts available for today
-                  </p>
-                )}
-              </div>
+               {[
+                 { label: "Department", value: employeeData.department, color: "blue", icon: Building2 },
+                 { label: "Designation", value: employeeData.designation, color: "orange", icon: Briefcase },
+                 { label: "Current Shift", value: employeeData.availableShifts[0]?.name || "None", color: "green", icon: Clock },
+               ].map((stat, i) => (
+                 <Card key={i} className="quantanex-card p-6 group relative overflow-hidden">
+                    <div className="flex items-start justify-between">
+                      <div className={`p-3 rounded-xl bg-accent-${stat.color}-10 border border-${stat.color}-500/20`}>
+                        <stat.icon className={`h-5 w-5 text-${stat.color}-500`} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
+                        <h3 className="text-lg font-bold text-white truncate max-w-[150px]">{stat.value}</h3>
+                      </div>
+                    </div>
+                    <div className={`mt-4 h-1 w-full bg-${stat.color}-500/10 rounded-full overflow-hidden`}>
+                      <div className={`h-full bg-${stat.color}-500 w-2/3 opacity-50`} />
+                    </div>
+                 </Card>
+               ))}
             </div>
 
-            {/* Active Shifts */}
-            {Object.keys(activeShifts).length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-3">Active Shifts</h2>
-                <div className="grid grid-cols-1 gap-3">
-                  {Object.entries(activeShifts).map(([shiftId, shiftInfo]) => (
-                    <div
-                      key={shiftId}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-900"
-                    >
-                      <div>
-                        <p className="font-medium">{shiftInfo.shift.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {shiftInfo.shift.startTime} -{" "}
-                          {shiftInfo.shift.endTime}
-                        </p>
-                        <p className="text-sm mt-1">
-                          Started: {formatTime(shiftInfo.startTime)} -
-                          <span
-                            className={
-                              shiftInfo.status.type === "Late"
-                                ? "text-amber-600 ml-1"
-                                : shiftInfo.status.type === "Early"
-                                ? "text-blue-600 ml-1"
-                                : "text-green-600 ml-1"
-                            }
-                          >
-                            {shiftInfo.status.type === "On Time"
-                              ? "On Time"
-                              : `${shiftInfo.status.type} (${shiftInfo.status.minutes}m)`}
-                          </span>
-                        </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Shift Control Center */}
+              <Card className="quantanex-card p-8 lg:col-span-2">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Shift Control</h3>
+                    <p className="text-xs text-muted-foreground">Manage your active work session</p>
+                  </div>
+                  {Object.keys(activeShifts).length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-[10px] font-bold text-green-500">LIVE</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  {Object.keys(activeShifts).length === 0 ? (
+                    <div className="flex flex-col sm:flex-row items-end gap-4 bg-white/[0.02] p-6 rounded-xl border border-white/5">
+                      <div className="flex-1 w-full space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Available Shift</label>
+                        <Select
+                          value={selectedShift?.id}
+                          onValueChange={(v) => setSelectedShift(employeeData.availableShifts.find(s => s.id === v))}
+                        >
+                          <SelectTrigger className="w-full bg-white/5 border-white/10 h-12 text-white">
+                            <SelectValue placeholder="Select shift to start..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#11141b] border-white/10 text-white">
+                            {availableShiftsForSelection.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button
-                        variant="outline"
-                        className="mt-2 sm:mt-0"
-                        onClick={() => handleEndShift(shiftId)}
+                        onClick={handleMarkAttendance}
+                        disabled={!canStartShift(selectedShift) || isVerifying}
+                        className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
                       >
-                        <Timer className="mr-2 h-5 w-5" />
-                        End Shift
+                        {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MapPin className="mr-2 h-4 w-4" />}
+                        Start Session
                       </Button>
                     </div>
-                  ))}
+                  ) : (
+                    Object.entries(activeShifts).map(([id, info]) => (
+                      <div key={id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-green-500/5 rounded-xl border border-green-500/20">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                            <Timer className="h-6 w-6 text-green-500 animate-pulse" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white uppercase tracking-tight">{info.shift.name}</p>
+                            <p className="text-xs text-muted-foreground">Started at {formatTime(info.startTime)} • Status: <span className="text-green-500 font-bold uppercase">{info.status.type}</span></p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleEndShift(id)}
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-widest px-8 h-12 mt-4 sm:mt-0 shadow-lg shadow-red-900/20 border-none"
+                        >
+                          End Session
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
-              </div>
-            )}
+              </Card>
 
-            {/* Today's Completed Shifts */}
-            {completedShifts.filter((shift) => shift.date === today).length >
-              0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-3">
-                Today&apos;s Completed Shifts
-                </h2>
-                <div className="grid grid-cols-1 gap-3">
-                  {completedShifts
-                    .filter((shift) => shift.date === today)
-                    .map((shift, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900"
-                      >
-                        <div>
-                          <p className="font-medium">{shift.shift}</p>
-                          <p className="flex items-center gap-1 mt-1">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            <span
-                              className={
-                                shift.status.includes("Late")
-                                  ? "text-amber-600"
-                                  : shift.status.includes("Early")
-                                  ? "text-blue-600"
-                                  : "text-green-600"
-                              }
-                            >
-                              {shift.status}
-                            </span>
-                          </p>
-                        </div>
-                        <div className="text-right mt-2 sm:mt-0">
-                          <p className="text-sm text-muted-foreground">
-                            Hours Worked
-                          </p>
-                          <p className="font-medium">{shift.hours}</p>
-                        </div>
+              {/* Recent Logs mini-list */}
+              <Card className="quantanex-card p-0 flex flex-col h-full">
+                <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                  <h3 className="text-lg font-bold text-white">Recent Logs</h3>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mt-1">Activity Feed</p>
+                </div>
+                <div className="flex-1 overflow-auto max-h-[400px] divide-y divide-white/5">
+                  {[...employeeData.attendanceHistory, ...completedShifts]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map((record, index) => (
+                      <div key={index} className="p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors group">
+                         <div className="flex items-center gap-3">
+                           <div className={`w-1.5 h-1.5 rounded-full ${record.status.includes("Late") ? "bg-amber-500" : "bg-green-500"}`} />
+                           <div>
+                             <p className="text-[10px] font-bold text-white uppercase group-hover:text-primary transition-colors">{record.shift}</p>
+                             <p className="text-[10px] text-muted-foreground">{record.date}</p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <p className={`text-[10px] font-bold ${record.status.includes("Late") ? "text-amber-500" : "text-green-500"}`}>{record.status.toUpperCase()}</p>
+                           <p className="text-[10px] text-muted-foreground font-mono">{record.hours}H</p>
+                         </div>
                       </div>
                     ))}
                 </div>
+              </Card>
+            </div>
+
+            {/* Attendance Analytics (Full Width Chart) */}
+            <Card className="quantanex-card p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Attendance Analytics</h3>
+                  <p className="text-xs text-muted-foreground">Historical work hour performance</p>
+                </div>
+                <div className="text-right">
+                   <p className="text-[10px] font-bold text-muted-foreground uppercase">Average</p>
+                   <p className="text-lg font-bold text-primary tracking-tighter">7.4 HRS</p>
+                </div>
               </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Employee Details Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <Building2 className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Department</h3>
-            </div>
-            <p className="text-2xl font-bold">{employeeData.department}</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <Briefcase className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Designation</h3>
-            </div>
-            <p className="text-2xl font-bold">{employeeData.designation}</p>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <CalendarClock className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Available Shifts</h3>
-            </div>
-            <div className="space-y-2">
-              {employeeData.availableShifts.map((shift) => (
-                <div key={shift.id} className="flex justify-between">
-                  <p className="font-medium">{shift.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {shift.startTime} - {shift.endTime}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Attendance History */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Recent Attendance History
-          </h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={[
-                  ...employeeData.attendanceHistory,
-                  ...completedShifts.filter((shift) => shift.date !== today),
-                ]}
-                margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis
-                  dataKey="date"
-                  stroke="currentColor"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="currentColor"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                  label={{ value: "Hours", angle: -90, position: "insideLeft" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    padding: "8px",
-                  }}
-                />
-                <Bar
-                  dataKey="hours"
-                  fill="hsl(var(--primary))"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Attendance History Table */}
-          <div className="mt-6 border rounded-md">
-            <div className="grid grid-cols-4 p-3 border-b bg-muted/50 font-medium">
-              <div>Date</div>
-              <div>Shift</div>
-              <div>Status</div>
-              <div>Hours</div>
-            </div>
-            {[...employeeData.attendanceHistory, ...completedShifts]
-              .sort((a, b) => {
-                // Sort by date (newest first)
-                const dateA = new Date(a.date);
-                const dateB = new Date(b.date);
-                return dateB - dateA;
-              })
-              .map((record, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-4 p-3 border-b last:border-0"
-                >
-                  <div>{record.date}</div>
-                  <div>{record.shift}</div>
-                  <div
-                    className={
-                      record.status.includes("Late")
-                        ? "text-amber-600"
-                        : record.status.includes("Early")
-                        ? "text-blue-600"
-                        : "text-green-600"
-                    }
-                  >
-                    {record.status}
-                  </div>
-                  <div>{record.hours}</div>
-                </div>
-              ))}
-          </div>
-        </Card>
+              <div className="h-[350px] w-full flex items-center justify-center">
+                {[...employeeData.attendanceHistory, ...completedShifts].length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[...employeeData.attendanceHistory, ...completedShifts].slice(0, 10).reverse()}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="rgba(255,255,255,0.4)" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        dy={10} 
+                      />
+                      <YAxis 
+                        stroke="rgba(255,255,255,0.4)" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false} 
+                      />
+                      <Tooltip {...tooltipStyle} />
+                      <Bar dataKey="hours" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No attendance data available yet.</p>
+                )}
+              </div>
+            </Card>
           </>
         )}
-        {/* Verification Modal */}
-        <Dialog open={isVerifying} onOpenChange={(open) => !open && setIsVerifying(false)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Attendance Verification</DialogTitle>
-              <DialogDescription>
-                Please wait while we verify your identity and location.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col items-center justify-center p-6 space-y-6">
-              {error && (
-                <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive animate-in fade-in zoom-in duration-300">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                  <p className="text-sm font-medium">{error}</p>
+      </div>
+
+      {/* Verification Modal */}
+      <Dialog open={isVerifying} onOpenChange={(o) => !o && setIsVerifying(false)}>
+        <DialogContent className="bg-[#11141b] border-white/10 text-white max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">Identity Verification</DialogTitle>
+            <DialogDescription className="text-center text-muted-foreground">Command Center Security Protocol</DialogDescription>
+          </DialogHeader>
+          <div className="p-6 space-y-6">
+             {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-bold animate-in fade-in zoom-in">
+                  {error}
                 </div>
-              )}
-              {verificationStep === 'location' && (
-                <div className="text-center space-y-4">
-                  <div className="relative">
+             )}
+             
+             {verificationStep === 'location' && (
+                <div className="text-center space-y-4 py-8">
+                  <div className="relative inline-block">
                     <MapPin className="h-16 w-16 text-primary animate-bounce mx-auto" />
                     <Loader2 className="h-20 w-20 text-primary/20 animate-spin absolute -top-2 -left-2" />
                   </div>
-                  <p className="font-medium">Checking GPS Location...</p>
-                  <p className="text-sm text-muted-foreground">
-                    {verificationDistance !== null 
-                      ? `Distance: ${verificationDistance.toFixed(0)}m (Max: 100m)`
-                      : "Verifying geofence (100m radius)"}
-                  </p>
-                  {error && (
-                    <Button variant="outline" size="sm" onClick={() => setIsVerifying(false)}>
-                      Close & Fix Location
-                    </Button>
-                  )}
+                  <p className="text-sm font-bold uppercase tracking-widest">Checking Geofence...</p>
                 </div>
-              )}
+             )}
 
-              {verificationStep === 'success' && (
-                <div className="text-center space-y-4 animate-in zoom-in duration-500">
-                  <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="h-12 w-12 text-green-600" />
+             {verificationStep === 'face' && (
+                <div className="space-y-6">
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-black aspect-video">
+                    <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 border-[30px] border-black/40 rounded-full scale-110 pointer-events-none" />
                   </div>
-                  <h3 className="text-xl font-bold text-green-700">Attendance Marked!</h3>
-                  <p className="text-muted-foreground">Shift started successfully.</p>
-                </div>
-              )}
-
-              {verificationStep === 'face' && (
-                <div className="text-center space-y-4 w-full">
-                  <div className="relative rounded-2xl overflow-hidden border-4 border-primary/20 shadow-2xl bg-black aspect-video">
-                    <Webcam
-                      audio={false}
-                      ref={webcamRef}
-                      screenshotFormat="image/jpeg"
-                      className="w-full h-full object-cover"
-                      videoConstraints={{ facingMode: "user" }}
-                    />
-                    <div className="absolute inset-0 border-[20px] border-black/40 pointer-events-none rounded-full scale-110"></div>
-                  </div>
-                  <p className="font-medium flex items-center justify-center gap-2">
-                    <Camera className="h-5 w-5 text-primary" />
-                    Position your face in the center
-                  </p>
-                  <Button onClick={captureAndVerify} className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20">
-                    Capture & Verify
+                  <Button onClick={captureAndVerify} className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs">
+                    Verify Identity
                   </Button>
                 </div>
-              )}
+             )}
 
-              {verificationStep === 'submitting' && (
-                <div className="text-center space-y-4">
-                  <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto" />
-                  <p className="font-medium">Finalizing Attendance...</p>
-                  <p className="text-sm text-muted-foreground">This will only take a moment</p>
+             {verificationStep === 'success' && (
+                <div className="text-center py-8 animate-in zoom-in">
+                   <div className="h-20 w-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 className="h-12 w-12 text-green-500" />
+                   </div>
+                   <h3 className="text-xl font-bold">Authenticated</h3>
+                   <p className="text-sm text-muted-foreground">Session started successfully</p>
                 </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </>
+             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

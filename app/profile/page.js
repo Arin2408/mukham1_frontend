@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -45,15 +46,15 @@ function ProfileContent() {
   const { toast } = useToast();
   const { orgId, logoutUser, authChecked, user } = useAuth(); 
 
-  const mockData = {
-    name: user?.name || "John Doe (Member)",
-    email: user?.profile?.email || "member@mukham.com",
-    details: "Employee Profile View",
-    mobile: user?.mobile_number || "1234567890"
+  const emptyData = {
+    name: user?.name || "",
+    email: user?.profile?.email || "",
+    details: "",
+    mobile: user?.mobile_number || ""
   };
 
-  const [displayedOrganisation, setDisplayedOrganisation] = useState(mockData);
-  const [formData, setFormData] = useState({ ...mockData, modified: false });
+  const [displayedOrganisation, setDisplayedOrganisation] = useState(emptyData);
+  const [formData, setFormData] = useState({ ...emptyData, modified: false });
 
   // Update if user changes
   useEffect(() => {
@@ -121,7 +122,7 @@ function ProfileContent() {
             return;
           }
         } catch (err) {
-          console.error("Employee fetch failed, staying with mock", err);
+          console.error("Employee fetch failed", err);
         }
       }
 
@@ -139,15 +140,12 @@ function ProfileContent() {
         throw new Error("No organization ID found");
       }
     } catch (error) {
-      console.error("Failed to fetch profile details, using mock fallback", error);
-      const mockData = {
-        name: "John Doe (Member)",
-        email: "member@mukham.com",
-        details: "Employee Profile View",
-        mobile: "1234567890"
-      };
-      setDisplayedOrganisation(mockData);
-      setFormData({ ...mockData, modified: false });
+      console.error("Failed to fetch profile details", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load profile details.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -251,65 +249,73 @@ useEffect(() => {
       <style jsx global>{`
         ${isEmbed ? 'body { overflow: hidden; }' : ''}
       `}</style>
-      {!isEmbed && <Header />}
-      <div className="p-6">
+      {!isEmbed && <Sidebar />}
+      <div className="flex-1 ml-64 relative z-10">
+        <div className="p-6 lg:p-10">
         <div className="flex items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold">Organisation Profile</h1>
+          <h1 className="text-3xl font-bold text-white">Organisation Profile</h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="col-span-1">
+          <Card className="quantanex-card border-white/5 col-span-1">
             <CardHeader>
-              <CardTitle>Organisation Information</CardTitle>
+              <CardTitle className="text-white">Information</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
-              <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>{displayedOrganisation.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <h2 className="text-xl font-semibold">{displayedOrganisation.name}</h2>
-              <p className="text-sm text-muted-foreground">{displayedOrganisation.email}</p>
-              <p className="text-sm text-muted-foreground">{displayedOrganisation.details}</p>
-              <Button variant="outline" className="mt-4" onClick={logoutUser}>
-      Logout
-    </Button>
+              <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-primary/20 mb-6">
+                {displayedOrganisation.name.charAt(0)}
+              </div>
+              <h2 className="text-xl font-bold text-white mb-1">{displayedOrganisation.name}</h2>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-6">{displayedOrganisation.email}</p>
+              <Button variant="outline" className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-bold uppercase tracking-widest text-[10px] h-11" onClick={logoutUser}>
+                Terminate Session
+              </Button>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1 md:col-span-2">
+          <Card className="quantanex-card border-white/5 col-span-1 md:col-span-2">
             <CardHeader>
-              <CardTitle>Edit Organisation</CardTitle>
+              <CardTitle className="text-white uppercase tracking-tight text-lg">Edit Organisation</CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4" onSubmit={handleSaveChanges}>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                  />
+              <form className="space-y-6" onSubmit={handleSaveChanges}>
+                <div className="flex flex-wrap gap-6">
+                  <div className="space-y-2 w-80">
+                    <Label htmlFor="name" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Org Name</Label>
+                    <Input
+                      id="name"
+                      className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 w-80">
+                    <Label htmlFor="email" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Support Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="details">Details</Label>
+                  <Label htmlFor="details" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Org Details</Label>
                   <Input
                     id="details"
+                    className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
                     value={formData.details}
                     onChange={(e) => handleInputChange("details", e.target.value)}
                   />
                 </div>
-                <Button type="submit" disabled={isLoading || !hasChanges}>
-                  {isLoading ? "Saving..." : hasChanges ? "Save Changes" : "No Changes"}
-                </Button>
+                <div className="flex justify-end pt-4">
+                  <Button type="submit" disabled={isLoading || !hasChanges} className={`px-10 h-11 font-bold uppercase tracking-widest text-[10px] shadow-lg transition-all ${
+                    hasChanges ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" : "bg-white/5 text-muted-foreground"
+                  }`}>
+                    {isLoading ? "Synchronizing..." : hasChanges ? "Save Changes" : "No Changes Detected"}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -329,6 +335,7 @@ useEffect(() => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+    </div>
     </>
   );
 }

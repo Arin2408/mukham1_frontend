@@ -33,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
@@ -52,6 +53,9 @@ export default function DepartmentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [availableShifts, setAvailableShifts] = useState([]);
+  const [selectedShiftId, setSelectedShiftId] = useState("");
   const { orgId } = useAuth(); // Get orgId from AuthContext
 
   // Helper function to verify token and handle authentication issues
@@ -160,11 +164,33 @@ export default function DepartmentPage() {
     }
   }, [toast, verifyToken]);
 
+  const fetchLeaderboard = useCallback(async () => {
+    if (!(await verifyToken())) return;
+    try {
+      const data = await AxiosGet("departments/leaderboard/");
+      setLeaderboard(data);
+    } catch (error) {
+      console.error("Failed to fetch leaderboard", error);
+    }
+  }, [verifyToken]);
+
+  const fetchShifts = useCallback(async () => {
+    if (!(await verifyToken())) return;
+    try {
+      const data = await AxiosGet("shifts/");
+      setAvailableShifts(data);
+    } catch (error) {
+      console.error("Failed to fetch shifts", error);
+    }
+  }, [verifyToken]);
+
   useEffect(() => {
     fetchOrganizations();
     fetchLocations();
     fetchDepartments();
-  }, [fetchOrganizations, fetchLocations, fetchDepartments]);
+    fetchLeaderboard();
+    fetchShifts();
+  }, [fetchOrganizations, fetchLocations, fetchDepartments, fetchLeaderboard, fetchShifts]);
 
   const handleInputChange = (field, value) => {
     if (editingDepartment) {
@@ -210,6 +236,32 @@ export default function DepartmentPage() {
         variant: "destructive",
         title: "Error",
         description: error.response?.data?.detail || "Failed to add department",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkAssignShift = async (departmentId) => {
+    if (!selectedShiftId) {
+      toast({ variant: "destructive", title: "Error", description: "Please select a shift" });
+      return;
+    }
+    if (!(await verifyToken())) return;
+
+    setIsLoading(true);
+    try {
+      await AxiosPost("bulk-assign/", {
+        department_id: departmentId,
+        shift_id: selectedShiftId
+      });
+      toast({ title: "Success", description: "Shift assigned to all department employees" });
+      setSelectedShiftId("");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to assign shift",
       });
     } finally {
       setIsLoading(false);
@@ -278,13 +330,43 @@ export default function DepartmentPage() {
 
   return (
     <>
-      <Header />
-      <div className="p-6 space-y-8">
-        <h1 className="text-3xl font-bold">Department Management</h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Add New Department</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <Sidebar />
+      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
+        <h1 className="text-3xl font-bold tracking-tight text-white">Department Management</h1>
+
+        {/* 🏆 Attendance Leaderboard */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="p-6 bg-white/5 border-white/10 col-span-1 md:col-span-4">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-1.5 h-6 bg-yellow-500 rounded-full" />
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Attendance Leaderboard
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {leaderboard.map((item, index) => (
+                <div key={item.department_id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 hover:border-yellow-500/50 transition-all group">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black italic text-white/20 group-hover:text-yellow-500/40 transition-colors"> </span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{item.department_name}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.total_attendances} Records</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-yellow-500">{item.punctuality_score}%</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">Punctuality</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        <div className="flex flex-col gap-8">
+          <Card className="p-8">
+            <h2 className="text-lg font-semibold mb-6">Add New Department</h2>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Organization</label>
                 <Input
@@ -292,12 +374,7 @@ export default function DepartmentPage() {
                   readOnly
                   placeholder="Enter organization name"
                   value={formData.org.name}
-                  onChange={(e) =>
-                    handleInputChange("org", {
-                      id: orgId,
-                      name: e.target.value,
-                    })
-                  }
+                  className="h-11 bg-white/5 border-white/10 w-full"
                 />
               </div>
 
@@ -307,6 +384,7 @@ export default function DepartmentPage() {
                   value={formData.details}
                   onChange={(e) => handleInputChange("details", e.target.value)}
                   placeholder="Enter department name"
+                  className="h-11 bg-white/5 border-white/10 w-full"
                 />
               </div>
 
@@ -324,7 +402,7 @@ export default function DepartmentPage() {
                     })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 bg-white/5 border-white/10 w-full">
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,14 +418,14 @@ export default function DepartmentPage() {
                 </Select>
               </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full">
+              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10">
                 {isLoading ? "Adding..." : "Add Department"}
               </Button>
             </form>
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Departments List</h2>
+            <h2 className="text-lg font-semibold mb-6">Departments List</h2>
             <div className="space-y-4">
               {departments.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
@@ -381,6 +459,52 @@ export default function DepartmentPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        {/* 📅 Bulk Shift Assignment Dialog */}
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white transition-all text-[10px] uppercase tracking-widest font-bold">
+                              Assign Shift
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-[#0d1117] border-white/10">
+                            <DialogHeader>
+                              <DialogTitle className="text-white">Bulk Assign Shift: {dept.details}</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 space-y-4">
+                              <p className="text-sm text-muted-foreground">
+                                Select a shift to apply to ALL employees currently in the <span className="text-white font-bold">{dept.details}</span> department.
+                              </p>
+                              <Select onValueChange={setSelectedShiftId}>
+                                <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+                                  <SelectValue placeholder="Choose a Shift" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0d1117] border-white/10">
+                                  {availableShifts.filter(s => s.department === dept.department_id).map(shift => (
+                                    <SelectItem key={shift.shift_id} value={shift.shift_id.toString()} className="text-white focus:bg-white/10 focus:text-white">
+                                      {shift.shift_name} ({shift.shift_start_time} - {shift.shift_end_time})
+                                    </SelectItem>
+                                  ))}
+                                  {availableShifts.filter(s => s.department === dept.department_id).length === 0 && (
+                                    <p className="text-center py-2 text-xs text-muted-foreground">No shifts defined for this department</p>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button variant="outline" className="text-white border-white/10 hover:bg-white/5">Cancel</Button>
+                              </DialogClose>
+                              <Button 
+                                onClick={() => handleBulkAssignShift(dept.department_id)} 
+                                disabled={isLoading || !selectedShiftId}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                {isLoading ? "Assigning..." : "Assign to All"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button

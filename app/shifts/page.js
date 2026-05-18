@@ -30,12 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Users, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
 import { jwtDecode } from "jwt-decode";
-import {
+import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -46,6 +47,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+// Shift Timeline Logic is now inlined for maximum reliability
 
 export default function ShiftsPage() {
   const router = useRouter();
@@ -276,8 +279,8 @@ export default function ShiftsPage() {
 
   return (
     <>
-      <Header />
-      <div className="p-6">
+      <Sidebar />
+      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
         <div className="flex items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold">Shift Management</h1>
           <div className="ml-auto">
@@ -370,7 +373,97 @@ export default function ShiftsPage() {
           </div>
         </div>
 
-        <Card>
+        {/* PREMIUM SHIFT ANALYTICS */}
+        {shifts.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+            {/* Peak Hours Heatmap */}
+            <Card className="quantanex-card p-6 border-white/5 bg-[#11141b] lg:col-span-1">
+              <div className="flex items-center gap-2 mb-6">
+                <Users className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Peak Hours</h3>
+              </div>
+              <div className="space-y-1.5">
+                {(() => {
+                  const counts = new Array(24).fill(0);
+                  shifts.forEach(s => {
+                    let start = parseInt(s.shift_start_time.split(':')[0]);
+                    let end = parseInt(s.shift_end_time.split(':')[0]);
+                    if (end <= start) end += 24;
+                    for (let h = start; h < end; h++) counts[h % 24]++;
+                  });
+                  const max = Math.max(...counts, 1);
+                  return counts.filter((_, i) => i % 2 === 0).map((c, i) => (
+                    <div key={i} className="flex items-center gap-2 group">
+                      <span className="text-[9px] text-white/30 w-8">{(i*2).toString().padStart(2, '0')}:00</span>
+                      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500/50 transition-all duration-1000" style={{ width: `${(c/max)*100}%` }} />
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </Card>
+
+            {/* Timeline Visualizer */}
+            <Card className="quantanex-card p-6 border-white/5 bg-[#11141b] lg:col-span-3">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-400" />
+                  <h3 className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Visual Timeline</h3>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500/30" /><span className="text-[8px] text-white/40 font-bold uppercase">Day</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500/30" /><span className="text-[8px] text-white/40 font-bold uppercase">Night</span></div>
+                </div>
+              </div>
+
+              <div className="relative h-[220px]">
+                {/* Time Grid */}
+                <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
+                  {[0, 6, 12, 18, 24].map(h => (
+                    <div key={h} className="h-full border-r border-white/40 relative">
+                      <span className="absolute -top-6 -right-3 text-[9px] text-white font-medium">{h}:00</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bars */}
+                <div className="space-y-3 py-2 relative z-10 h-full overflow-y-auto custom-scrollbar">
+                  {shifts.map((shift, i) => {
+                    const getP = (t) => { if(!t) return 0; const [h,m] = t.split(':').map(Number); return ((h+(m||0)/60)/24)*100; };
+                    const start = getP(shift.shift_start_time);
+                    const end = getP(shift.shift_end_time);
+                    const isOver = end <= start;
+                    const color = isOver ? 'bg-purple-500/20 border-purple-400/30' : 'bg-blue-500/20 border-blue-400/30';
+                    const dept = departments.find(d => d.department_id === shift.department)?.details || 'Staff';
+
+                    return (
+                      <div key={shift.shift_id} className="relative h-10 group">
+                        {isOver ? (
+                          <>
+                            <div className={`absolute h-full rounded-l border-y border-l ${color} flex items-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
+                              <span className="text-[10px] font-bold text-white truncate">{shift.shift_name}</span>
+                            </div>
+                            <div className={`absolute h-full rounded-r border-y border-r ${color} flex items-center px-3`} style={{ left: '0%', width: `${end}%` }}>
+                              <span className="text-[10px] font-bold text-white truncate opacity-0 group-hover:opacity-100">{shift.shift_name}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className={`absolute h-full rounded border ${color} flex flex-col justify-center px-3`} style={{ left: `${start}%`, width: `${end - start}%` }}>
+                            <span className="text-[10px] font-bold text-white truncate">{shift.shift_name}</span>
+                            <span className="text-[8px] text-white/30 uppercase tracking-tighter">{dept}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <Card className="quantanex-card border-white/5 overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

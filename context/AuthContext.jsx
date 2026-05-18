@@ -16,7 +16,7 @@ export const useAuth = () => {
 };
 
 export const Axios = axios.create({
-  baseURL: "http://127.0.0.1:8001/api/",
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}/api/`,
 });
 
 export const AxiosPost = async (apiname, body, method = "post") => {
@@ -150,10 +150,17 @@ const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Axios Error:", err.response?.data || err.message);
+      let errorMessage = "Invalid credentials";
+      if (!err.response) {
+        errorMessage = "Server unreachable. Check your Wi-Fi and Firewall.";
+      } else if (err.response.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: err.response?.data?.error || "Invalid credentials",
+        description: errorMessage,
       });
       return { success: false };
     } finally {
@@ -203,7 +210,13 @@ const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Axios Error:", err.response?.data || err.message);
-      const serverError = err.response?.data?.error || "Invalid credentials";
+      let serverError = "Invalid credentials";
+      if (!err.response) {
+        serverError = "Server unreachable. Check your Wi-Fi and Firewall.";
+      } else if (err.response.data?.error) {
+        serverError = err.response.data.error;
+      }
+
       toast({
         variant: "destructive",
         title: "Login failed",

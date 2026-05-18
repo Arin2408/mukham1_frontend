@@ -15,11 +15,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
           <AuthProvider> 
-            <div className="pt-14">
-              {children}
-            </div>
+            {children}
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

@@ -1,98 +1,97 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Building2, Clock, Users } from "lucide-react";
+import { Building2, Clock, Globe, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#02040a] text-white selection:bg-primary/30 overflow-x-hidden relative flex flex-col">
+      {/* Aurora Atmosphere */}
+      <div className="fixed inset-0 aurora-flow opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 cyber-grid opacity-10 pointer-events-none" />
+
       {/* Hero Section */}
-      <div className="relative isolate px-6 pt-14 lg:px-8">
-        <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-              Mukham Organization Management
-            </h1>
-            <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              Streamline your organizational tasks with our comprehensive management platform.
-              Handle roles, attendance, and shifts efficiently in one place.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Link href="/login">
-                <Button size="lg">
-                  Login as Organization
-                </Button>
-              </Link>
-              <Link href="/member-login">
-                <Button size="lg">
-                  Login as Member
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="lg">
-                  Create an Organisation
-                </Button>
-              </Link>
-              <Link href="/about">
-                <Button variant="ghost" size="lg">
-                  Learn more
-                </Button>
-              </Link>
-            </div>
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6 text-center">
+        <div className="max-w-[1200px] mx-auto space-y-12">
+          <h1 className="text-8xl md:text-9xl lg:text-[12rem] font-black tracking-tighter leading-none text-reveal">
+            MUKHAM
+          </h1>
+
+          <p className="max-w-xl mx-auto text-lg md:text-xl text-muted-foreground/80 leading-relaxed font-medium animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+            The next generation of organizational intelligence. Secure, real-time monitoring 
+            and workforce management for high-performance teams.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-8 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
+            <Link href="/login">
+              <Button size="lg" className="h-14 px-10 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-2xl shadow-primary/20 border-none transition-all active:scale-95 group shimmer-btn">
+                Org Login <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/member-login">
+              <Button size="lg" className="h-14 px-10 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold uppercase tracking-widest text-[10px] backdrop-blur-sm transition-all active:scale-95">
+                Member Access
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button size="lg" className="h-14 px-10 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 font-bold uppercase tracking-widest text-[10px] backdrop-blur-sm transition-all active:scale-95">
+                Establish Org
+              </Button>
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl lg:text-center">
-            <h2 className="text-base font-semibold leading-7 text-primary">Manage Better</h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything you need to run your organization
-            </p>
-          </div>
-          <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-            <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-3">
-              {/* Role Management */}
-              <Card className="p-8">
-                <div className="flex items-center gap-4">
-                  <Users className="h-8 w-8 text-primary" />
-                  <h3 className="text-xl font-semibold">Role Management</h3>
+      {/* Features Section (Reverted to Old Style) */}
+      <section className="relative py-24 px-6 flex-grow">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Neural Role Management",
+                desc: "Sophisticated permission layers with real-time biometric verification support. Assign roles and track responsibilities with enterprise-grade precision.",
+                icon: ShieldCheck,
+                color: "text-primary",
+              },
+              {
+                title: "Pulse Tracking",
+                desc: "Live attendance monitoring with sub-second synchronization across all nodes. Monitor your workforce in real-time.",
+                icon: Clock,
+                color: "text-indigo-400",
+              },
+              {
+                title: "Shift Orchestration",
+                desc: "Schedule and manage shifts efficiently with our intuitive interface. Keep your team organized, informed, and synchronized.",
+                icon: Building2,
+                color: "text-emerald-400",
+              },
+            ].map((feature, i) => (
+              <Card key={i} className="glass-card p-10 group hover:border-primary/50 transition-all duration-500">
+                <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
+                  <feature.icon className={`h-6 w-6 ${feature.color}`} />
                 </div>
-                <p className="mt-4 text-muted-foreground">
-                  Create and manage organizational roles with specific permissions.
-                  Easily assign roles to team members and track responsibilities.
+                <h3 className="text-xl font-bold text-white mb-4 tracking-tight uppercase">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed text-sm">
+                  {feature.desc}
                 </p>
+                <div className="mt-8 h-[1px] w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               </Card>
-
-              {/* Attendance Tracking */}
-              <Card className="p-8">
-                <div className="flex items-center gap-4">
-                  <Clock className="h-8 w-8 text-primary" />
-                  <h3 className="text-xl font-semibold">Attendance Tracking</h3>
-                </div>
-                <p className="mt-4 text-muted-foreground">
-                  Monitor attendance in real-time with our advanced tracking system.
-                  Generate reports and analyze attendance patterns.
-                </p>
-              </Card>
-
-              {/* Shift Management */}
-              <Card className="p-8">
-                <div className="flex items-center gap-4">
-                  <Building2 className="h-8 w-8 text-primary" />
-                  <h3 className="text-xl font-semibold">Shift Management</h3>
-                </div>
-                <p className="mt-4 text-muted-foreground">
-                  Schedule and manage shifts efficiently with our intuitive interface.
-                  Keep your team organized and informed.
-                </p>
-              </Card>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-10 border-t border-white/5 relative">
+        <div className="max-w-[1200px] mx-auto px-6 text-center">
+          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.4em]">
+            © {new Date().getFullYear()} MUKHAM. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

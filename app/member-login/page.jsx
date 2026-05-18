@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { LogIn, Phone, Lock, Smartphone, ArrowRight, Camera, ShieldCheck } from "lucide-react";
+import { Smartphone, Lock, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
 import { Axios } from "@/context/AuthContext";
 import FaceCamera from "@/components/FaceCamera";
+import Link from "next/link";
 
 export default function MemberLoginPage() {
   const [mobileNumber, setMobileNumber] = useState("");
@@ -30,14 +31,11 @@ export default function MemberLoginPage() {
     try {
       const cleanMobile = mobileNumber.replace(/\D/g, "").slice(-10);
       
-      // 1. First, verify if mobile and password are correct
-      // We call member/login but we don't redirect yet if face is required
       const { data } = await Axios.post("member/login/", { 
         mobile_number: cleanMobile,
         password: password
       });
 
-      // 2. Check face status
       let faceRegistered = false;
       try {
         const { data: faceData } = await Axios.post("face/check-status/", { mobile_number: cleanMobile });
@@ -47,7 +45,6 @@ export default function MemberLoginPage() {
         setIsFaceRegistered(false);
       }
 
-      // 3. Flow Logic: If already registered, skip face and login now.
       if (faceRegistered) {
         const res = await loginMember({ mobile_number: mobileNumber, password: password });
         if (res.success) {
@@ -58,7 +55,6 @@ export default function MemberLoginPage() {
         }
       }
 
-      // 4. If NOT registered, go to step 2 (Face Registration)
       setStep(2);
     } catch (error) {
       console.error("Credentials verification failed", error);
@@ -75,14 +71,12 @@ export default function MemberLoginPage() {
 
     try {
       if (!isFaceRegistered) {
-        // Path A: Registering face for the first time
         await Axios.post("face/register/", {
           mobile_number: cleanMobile,
           face_image_base64: base64Image
         });
         setIsFaceRegistered(true);
       } else {
-        // Path B: Verify face
         const { data } = await Axios.post("face/verify/", {
           mobile_number: cleanMobile,
           face_image_base64: base64Image
@@ -95,8 +89,6 @@ export default function MemberLoginPage() {
         }
       }
 
-      // If we reach here, credentials were confirmed in step 1 and face is now confirmed/registered
-      // We complete the login using the same credentials from step 1
       const res = await loginMember({ mobile_number: mobileNumber, password: password });
       if (res.success) {
         router.push("/member");
@@ -112,20 +104,26 @@ export default function MemberLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-primary/10 transition-all duration-500">
-        <CardHeader className="space-y-1 text-center bg-primary/5 rounded-t-xl pb-8">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Smartphone className="text-white w-8 h-8" />
+    <div className="min-h-screen flex items-center justify-center bg-[#02040a] px-4 relative overflow-hidden">
+      {/* Background Atmosphere */}
+      <div className="absolute inset-0 aurora-flow opacity-20 pointer-events-none" />
+      <div className="absolute inset-0 cyber-grid opacity-10 pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-slow-pulse" />
+      
+      <Card className="w-full max-w-md quantanex-card relative z-10 overflow-hidden border-white/5 bg-white/[0.02] backdrop-blur-xl">
+        <CardHeader className="space-y-2 pb-8 pt-10 text-center">
+          <div className="mx-auto w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/10">
+            <Smartphone className="text-primary w-8 h-8" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Member Portal</CardTitle>
-          <CardDescription>
-            {step === 1 ? "Enter your credentials to begin" : "Biometric Verification"}
+          <CardTitle className="text-3xl font-bold tracking-tighter text-white uppercase">Member Portal</CardTitle>
+          <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground opacity-70">
+            {step === 1 ? "Authorized Personnel Only" : "Biometric Protocol"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-8">
+        
+        <CardContent className="space-y-6 px-8 pb-12">
           {errorMsg && (
-            <div className="mb-6 p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg text-center animate-in fade-in zoom-in duration-300">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-lg text-center animate-in fade-in zoom-in duration-300">
               {errorMsg}
             </div>
           )}
@@ -134,65 +132,69 @@ export default function MemberLoginPage() {
             <form onSubmit={handleCredentialsSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="mobile" className="text-sm font-semibold">Mobile Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="mobile"
-                      type="text"
-                      placeholder="10-digit mobile number"
-                      className="pl-10 h-11"
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
-                      required
-                    />
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="mobile" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Mobile Number</Label>
+                    <Smartphone className="h-3 w-3 text-primary/40" />
                   </div>
+                  <Input
+                    id="mobile"
+                    type="text"
+                    placeholder="10-digit number"
+                    className="h-12 bg-white/5 border-white/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground/30"
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-semibold">Member Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      className="pl-10 h-11"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                    />
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="password" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Member Password</Label>
+                    <Lock className="h-3 w-3 text-primary/40" />
                   </div>
-                  <p className="text-[10px] text-muted-foreground px-1">
-                    Format: 5 digits of mobile + 5 letters of name (lowercase)
-                  </p>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    className="h-12 bg-white/5 border-white/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground/30"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
-              <Button type="submit" className="w-full h-11 text-lg group" disabled={isLoading}>
-                {isLoading ? "Verifying..." : "Continue"}
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <Button type="submit" className="w-full h-12 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group" disabled={isLoading}>
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Identifying...
+                  </div>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Access Portal <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
               </Button>
             </form>
           ) : (
             <div className="space-y-6">
-              <div className="p-3 bg-muted rounded-lg flex items-center justify-between mb-4">
-                <div className="flex flex-col">
-                   <span className="text-xs text-muted-foreground">Authenticated as</span>
-                   <span className="text-sm font-bold">{mobileNumber}</span>
+              <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+                <div>
+                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Authenticated</p>
+                  <p className="text-sm font-bold text-white font-mono tracking-widest">{mobileNumber}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-7 text-xs">Change</Button>
+                <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-8 text-[10px] font-bold uppercase text-primary hover:text-primary/80 hover:bg-white/5">Change</Button>
               </div>
 
-              <div className="text-center space-y-2 mb-4">
-                <h3 className="font-semibold text-lg">
-                  {isFaceRegistered ? "Verify your face" : "Register your face"}
+              <div className="text-center space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest">
+                  {isFaceRegistered ? "Biometric Verification" : "Secure Enrollment"}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Look at the camera and ensure your face is clearly visible
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Position your face within the frame for protocol confirmation.
                 </p>
               </div>
 
-              <div className="py-2">
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40">
                 <FaceCamera 
                   isRegistered={isFaceRegistered} 
                   isLoading={isLoading} 
@@ -202,22 +204,29 @@ export default function MemberLoginPage() {
               
               <Button 
                 variant="ghost" 
-                className="w-full text-muted-foreground text-xs"
+                className="w-full text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] hover:text-white"
                 onClick={() => setStep(1)}
               >
-                Back to credentials
+                Cancel Protocol
               </Button>
             </div>
           )}
           
-          <div className="mt-8 pt-6 border-t text-center">
-            <p className="text-sm text-muted-foreground">
-              Organization Admin? {" "}
-              <a href="/" className="text-primary hover:underline font-medium">Back to Login</a>
+          <div className="mt-8 pt-6 border-t border-white/5 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+              Admin Personnel? {" "}
+              <Link href="/" className="text-primary hover:text-primary/80 font-bold transition-colors">Return Entry</Link>
             </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Footer Info */}
+      <div className="absolute bottom-8 text-center w-full">
+        <p className="text-[10px] text-muted-foreground/40 font-bold uppercase tracking-[0.3em]">
+          Mukham Security Systems &copy; {new Date().getFullYear()}
+        </p>
+      </div>
     </div>
   );
 }
