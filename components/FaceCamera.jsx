@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
+import "@/lib/amplify-config";
 import { Button } from "@/components/ui/button";
 import { Camera, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
