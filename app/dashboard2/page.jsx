@@ -120,9 +120,11 @@ function DashboardContent({
   const { authChecked, user } = useAuth();
   
   const [employeeData, setEmployeeData] = useState({
-    ...emptyEmployeeData,
-    name: user?.name || emptyEmployeeData.name
-  });
+  ...emptyEmployeeData,
+  name: user?.name || emptyEmployeeData.name
+});
+
+const [verificationLocation, setVerificationLocation] = useState(null);
 
   // Update name if user state changes
   useEffect(() => {
@@ -276,7 +278,13 @@ function DashboardContent({
           // 2. Geofence Check Failed
           setError(`Location Mismatch: You are ${distance.toFixed(0)}m away from the office. (Allowed: 100m)`);
           // Record outside attempt
-          await submitAttendance('outside', 'skipped', true);
+          await submitAttendance(
+            'outside',
+            'skipped',
+            true,
+            latitude,
+            longitude
+                    );
           return;
         }
 
@@ -284,7 +292,7 @@ function DashboardContent({
         try {
           const mobile = user?.mobile_number || localStorage.getItem("user_mobile");
           const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
-          const { data: faceData } = await Axios.post("face/check-status/", { mobile_number: cleanMobile });
+          const { data: faceData } = await AxiosPost("face/check-status/", { mobile_number: cleanMobile });
           
           if (!faceData.is_face_registered) {
             setError("No face registered. Please register your face in the profile settings first.");
@@ -293,6 +301,11 @@ function DashboardContent({
         } catch (err) {
           console.warn("Face status check failed, proceeding anyway", err);
         }
+          setVerificationLocation({
+          latitude,
+          longitude
+        });
+
 
         // Proceed to Face Verification UI
         setVerificationStep('face');
@@ -329,24 +342,27 @@ function DashboardContent({
       });
 
       if (res.verified && res.confidence >= 90) {
-        await submitAttendance('inside', 'verified');
+        await submitAttendance('inside', 'verified', false,  verificationLocation.latitude,  verificationLocation.longitude  );
       } else {
         setError(`Face verification failed (Confidence: ${res.confidence?.toFixed(1)}%). Please try again.`);
-        await submitAttendance('inside', 'failed', true);
+        await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude);
       }
     } catch (err) {
       console.error("Face verification error:", err);
       const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || "Connection error";
       setError(`Face verification failed: ${errorMsg}`);
-      await submitAttendance('inside', 'failed', true);
+      await submitAttendance('inside', 'failed', true,  verificationLocation.latitude,  verificationLocation.longitude  );
+
     }
   };
 
-  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false) => {
+  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false, latitude = null, longitude = null) => {
     try {
       const res = await AxiosPost("mark-attendance/", {
         location_status: locationStatus,
-        face_status: faceStatus
+        face_status: faceStatus,
+        latitude: latitude,
+        longitude: longitude
       });
 
       // Update local state
