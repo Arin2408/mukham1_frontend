@@ -6,16 +6,27 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 # Copy project files
 COPY . .
 
-# Build the project (uncomment for production)
-# RUN npm run build
+# NEXT_PUBLIC_* values are baked into the bundle at build time
+# (.env.local is excluded by .dockerignore), so pass the API URL as a build arg:
+#   docker build --build-arg NEXT_PUBLIC_API_URL=https://api.example.com .
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_AWS_REGION
+ARG NEXT_PUBLIC_AWS_IDENTITY_POOL_ID
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_AWS_REGION=${NEXT_PUBLIC_AWS_REGION}
+ENV NEXT_PUBLIC_AWS_IDENTITY_POOL_ID=${NEXT_PUBLIC_AWS_IDENTITY_POOL_ID}
+ENV NODE_ENV=production
+
+# Build the optimized production bundle
+RUN npm run build
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "run", "dev"]
+# Start the production server
+CMD ["npm", "run", "start"]

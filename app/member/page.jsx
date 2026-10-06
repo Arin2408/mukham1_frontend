@@ -52,6 +52,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import {
+  GPS_MAX_ACCURACY_METERS,
+  getCurrentCoords,
+  officeRadius,
+} from "@/lib/geo";
+
 const tooltipStyle = {
   contentStyle: {
     backgroundColor: "#11141b",
@@ -63,8 +69,6 @@ const tooltipStyle = {
   itemStyle: { color: "#fff" },
   cursor: { fill: "rgba(255,255,255,0.05)" },
 };
-
-const GEOFENCE_RADIUS_METERS = 100;
 
 const emptyEmployeeData = {
   id: "---",
@@ -145,7 +149,8 @@ export default function MemberPortal() {
       try {
         const [data, history] = await Promise.all([
           AxiosGet("employee-details/"),
-          AxiosGet("attendance-history/"),
+          // Recent sessions only (newest first, so an open session is included)
+          AxiosGet("attendance-history/?limit=60"),
         ]);
 
         if (data?.profile) {
@@ -344,12 +349,27 @@ export default function MemberPortal() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          const { latitude, longitude } = position.coords;
+          const { latitude, longitude, accuracy } = position.coords;
 
           console.log("CURRENT EMPLOYEE GPS:", {
             latitude,
             longitude,
+            accuracy,
           });
+
+          // -------------------------------------------------
+          // GPS ACCURACY CHECK
+          // -------------------------------------------------
+
+          if (accuracy > GPS_MAX_ACCURACY_METERS) {
+            setError(
+              `Your location is only accurate to about ${Math.round(
+                accuracy
+              )}m (needs ${GPS_MAX_ACCURACY_METERS}m or better). Turn on precise location, move near a window or outdoors, and try again.`
+            );
+
+            return;
+          }
 
           // -------------------------------------------------
           // ORGANIZATION OFFICE LOCATION
@@ -363,55 +383,36 @@ export default function MemberPortal() {
             employeeData.office_location?.longitude
           );
 
-          console.log("OFFICE LOCATION:", {
-            latitude: officeLat,
-            longitude: officeLon,
-          });
-
           // -------------------------------------------------
-          // OFFICE LOCATION NOT CONFIGURED
+          // GEOFENCE PRE-CHECK (assigned office only)
+          // Without an assigned office the server matches the
+          // nearest organisation location, so skip the pre-check.
           // -------------------------------------------------
 
-          if (isNaN(officeLat) || isNaN(officeLon)) {
-            setError(
-              `Office location is not configured. Your current location is ${latitude.toFixed(
-                6
-              )}, ${longitude.toFixed(6)}.`
+          if (!isNaN(officeLat) && !isNaN(officeLon)) {
+            const radius = officeRadius(employeeData.office_location);
+
+            const distance = calculateDistance(
+              latitude,
+              longitude,
+              officeLat,
+              officeLon
             );
 
-            return;
-          }
+            console.log("DISTANCE FROM OFFICE:", distance, "meters");
 
-          // -------------------------------------------------
-          // CALCULATE DISTANCE
-          // -------------------------------------------------
+            setVerificationDistance(distance);
 
-          const distance = calculateDistance(
-            latitude,
-            longitude,
-            officeLat,
-            officeLon
-          );
+            if (distance > radius) {
+              // Outside office -> show error only. Attendance is NOT recorded.
+              setError(
+                `Location Mismatch: You are ${distance.toFixed(
+                  0
+                )}m away from the office. Allowed radius: ${radius}m.`
+              );
 
-          console.log("DISTANCE FROM OFFICE:", distance, "meters");
-
-          setVerificationDistance(distance);
-
-          // -------------------------------------------------
-          // GEOFENCE CHECK
-          // -------------------------------------------------
-
-          const isInside = distance <= GEOFENCE_RADIUS_METERS;
-
-          if (!isInside) {
-            // Outside office -> show error only. Attendance is NOT recorded.
-            setError(
-              `Location Mismatch: You are ${distance.toFixed(
-                0
-              )}m away from the office. Allowed radius: ${GEOFENCE_RADIUS_METERS}m.`
-            );
-
-            return;
+              return;
+            }
           }
 
           // -------------------------------------------------
@@ -421,6 +422,7 @@ export default function MemberPortal() {
           setVerificationLocation({
             latitude,
             longitude,
+            accuracy,
           });
 
           // -------------------------------------------------
@@ -559,7 +561,8 @@ export default function MemberPortal() {
           "verified",
           false,
           verificationLocation.latitude,
-          verificationLocation.longitude
+          verificationLocation.longitude,
+          verificationLocation.accuracy
         );
       } else {
         // ---------------------------------------------------
@@ -601,14 +604,18 @@ export default function MemberPortal() {
     faceStatus,
     stayOpen = false,
     latitude = null,
-    longitude = null
+    longitude = null,
+    accuracy = null
   ) => {
     try {
       const res = await AxiosPost("mark-attendance/", {
+        // Explicit check-in: a repeated request never checks the user out
+        action: "checkin",
         location_status: locationStatus,
         face_status: faceStatus,
         latitude: latitude,
         longitude: longitude,
+        accuracy: accuracy,
       });
 
       console.log("ATTENDANCE RESPONSE:", res);
@@ -702,8 +709,16 @@ export default function MemberPortal() {
         return;
       }
 
+      // Send current GPS with the check-out so the backend can flag
+      // check-outs made away from the office. Check-out is never blocked:
+      // if location is unavailable it is sent without coordinates.
+      const coords = await getCurrentCoords();
+
       // Tell backend this is a check-out (never a new check-in)
-      await AxiosPost("mark-attendance/", { action: "checkout" });
+      await AxiosPost("mark-attendance/", {
+        action: "checkout",
+        ...(coords || {}),
+      });
 
       setActiveShifts((prev) => {
         const next = { ...prev };

@@ -28,6 +28,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import {
+  GPS_MAX_ACCURACY_METERS,
+  getCurrentCoords,
+  officeRadius,
+} from "@/lib/geo";
 import { Sidebar } from "@/components/Sidebar";
 import {
   BarChart,
@@ -260,32 +265,28 @@ const [verificationLocation, setVerificationLocation] = useState(null);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
-        const officeLat = parseFloat(employeeData.office_location?.latitude);
-        const officeLon = parseFloat(employeeData.office_location?.longitude);
+        const { latitude, longitude, accuracy } = position.coords;
 
-        if (isNaN(officeLat) || isNaN(officeLon)) {
-          setError(`Office location not set. Your Current coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-          // DO NOT close modal, let user see the error
+        if (accuracy > GPS_MAX_ACCURACY_METERS) {
+          setError(`Your location is only accurate to about ${Math.round(accuracy)}m (needs ${GPS_MAX_ACCURACY_METERS}m or better). Turn on precise location, move near a window or outdoors, and try again.`);
           return;
         }
 
-        const distance = calculateDistance(latitude, longitude, officeLat, officeLon);
-        setVerificationDistance(distance);
-        const isInside = distance <= 100;
+        const officeLat = parseFloat(employeeData.office_location?.latitude);
+        const officeLon = parseFloat(employeeData.office_location?.longitude);
 
-        if (!isInside) {
-          // 2. Geofence Check Failed
-          setError(`Location Mismatch: You are ${distance.toFixed(0)}m away from the office. (Allowed: 100m)`);
-          // Record outside attempt
-          await submitAttendance(
-            'outside',
-            'skipped',
-            true,
-            latitude,
-            longitude
-                    );
-          return;
+        // Pre-check only against an assigned office. Without one, the server
+        // matches the nearest organisation location.
+        if (!isNaN(officeLat) && !isNaN(officeLon)) {
+          const radius = officeRadius(employeeData.office_location);
+          const distance = calculateDistance(latitude, longitude, officeLat, officeLon);
+          setVerificationDistance(distance);
+
+          if (distance > radius) {
+            // 2. Geofence Check Failed -> attendance is NOT recorded
+            setError(`Location Mismatch: You are ${distance.toFixed(0)}m away from the office. (Allowed: ${radius}m)`);
+            return;
+          }
         }
 
         // 3. Geofence Check Passed -> Check if we actually have a face registered
@@ -301,9 +302,10 @@ const [verificationLocation, setVerificationLocation] = useState(null);
         } catch (err) {
           console.warn("Face status check failed, proceeding anyway", err);
         }
-          setVerificationLocation({
+        setVerificationLocation({
           latitude,
-          longitude
+          longitude,
+          accuracy
         });
 
 
@@ -342,27 +344,29 @@ const [verificationLocation, setVerificationLocation] = useState(null);
       });
 
       if (res.verified && res.confidence >= 90) {
-        await submitAttendance('inside', 'verified', false,  verificationLocation.latitude,  verificationLocation.longitude  );
+        await submitAttendance('inside', 'verified', false, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
       } else {
         setError(`Face verification failed (Confidence: ${res.confidence?.toFixed(1)}%). Please try again.`);
-        await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude);
+        await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
       }
     } catch (err) {
       console.error("Face verification error:", err);
       const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || "Connection error";
       setError(`Face verification failed: ${errorMsg}`);
-      await submitAttendance('inside', 'failed', true,  verificationLocation.latitude,  verificationLocation.longitude  );
+      await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
 
     }
   };
 
-  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false, latitude = null, longitude = null) => {
+  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false, latitude = null, longitude = null, accuracy = null) => {
     try {
       const res = await AxiosPost("mark-attendance/", {
+        action: "checkin",
         location_status: locationStatus,
         face_status: faceStatus,
         latitude: latitude,
-        longitude: longitude
+        longitude: longitude,
+        accuracy: accuracy
       });
 
       // Update local state
@@ -393,7 +397,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
         setTimeout(() => setIsVerifying(false), 2000);
       }
     } catch (err) {
-      setError("Failed to record: " + (err.response?.data?.error || err.message));
+      setError("Failed to record: " + (err.response?.data?.detail || err.response?.data?.error || err.message));
     } finally {
       if (!stayOpen) {
         // Only set to none if we're closing
@@ -406,7 +410,10 @@ const [verificationLocation, setVerificationLocation] = useState(null);
   const handleEndShift = async (shiftId) => {
     try {
       setError(null);
-      await AxiosPost("mark-attendance/", {});
+      // Send current GPS so the backend can flag check-outs away from the
+      // office; check-out still works if location is unavailable.
+      const coords = await getCurrentCoords();
+      await AxiosPost("mark-attendance/", { action: "checkout", ...(coords || {}) });
       // Refresh local state instead of reload
       setActiveShifts(prev => {
         const next = { ...prev };

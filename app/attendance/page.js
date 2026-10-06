@@ -22,11 +22,14 @@ import {
 import { Clock, Search, ChevronDown, ChevronRight, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
-import { format } from "date-fns"
+import { format, subDays } from "date-fns"
 import { Sidebar } from "@/components/Sidebar";
 import { AxiosGet, AxiosPost, useAuth } from "@/context/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import { jwtDecode } from "jwt-decode"
+
+// How many days of attendance logs the history table loads
+const HISTORY_DAYS = 30
 
 export default function AttendancePage() {
   const router = useRouter()
@@ -75,7 +78,8 @@ export default function AttendancePage() {
 
       const [employeesRes, attendanceRes] = await Promise.all([
         AxiosGet(`list/?org_id=${orgId}`),
-        AxiosGet("attendance-history/"),
+        // Only load recent logs instead of the organization's full history
+        AxiosGet(`attendance-history/?from=${format(subDays(new Date(), HISTORY_DAYS), "yyyy-MM-dd")}`),
       ]);
 
       setEmployees(Array.isArray(employeesRes) ? employeesRes : []);
@@ -101,6 +105,7 @@ export default function AttendancePage() {
     try {
       setIsLoading(true);
       await AxiosPost("mark-attendance/", {
+        action: "checkin",
         employee_id: selectedEmployee,
         location_status: "inside", // Default for manual admin marking
         face_status: "verified"
@@ -125,6 +130,7 @@ export default function AttendancePage() {
     try {
       setIsLoading(true);
       await AxiosPost("mark-attendance/", {
+        action: "checkout",
         employee_id: selectedEmployee,
       });
       toast({ title: "Success", description: "Check-out marked successfully" });
@@ -161,7 +167,11 @@ export default function AttendancePage() {
         checkIn: log.check_in ? format(new Date(log.check_in), 'hh:mm a') : 'N/A',
         checkOut: log.check_out ? format(new Date(log.check_out), 'hh:mm a') : '-',
         status: log.status,
-        workHours: log.hours_worked || "0"
+        workHours: log.hours_worked || "0",
+        // Geofence / audit flags
+        isManual: log.source === "manual",
+        checkOutLocation: log.check_out_location_status,
+        checkOutDistance: log.check_out_distance
       })
       acc[empId].totalDays += 1
       acc[empId].totalHours += parseFloat(log.hours_worked) || 0
@@ -239,7 +249,10 @@ export default function AttendancePage() {
 
           <Card className="p-6 col-span-1 md:col-span-2 bg-white/5 border-white/10">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-              <h3 className="text-lg font-semibold">Live History</h3>
+              <h3 className="text-lg font-semibold">
+                Live History{" "}
+                <span className="text-xs font-normal text-muted-foreground">(last {HISTORY_DAYS} days)</span>
+              </h3>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
@@ -304,6 +317,7 @@ export default function AttendancePage() {
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Out</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Work</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Status</TableHead>
+                                      <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Flags</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -319,6 +333,25 @@ export default function AttendancePage() {
                                           }`}>
                                             {log.status}
                                           </span>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex flex-wrap gap-1">
+                                            {log.isManual && (
+                                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                                                Manual
+                                              </span>
+                                            )}
+                                            {log.checkOutLocation === "outside" && (
+                                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                                Out away{log.checkOutDistance != null ? ` (${Math.round(log.checkOutDistance)}m)` : ""}
+                                              </span>
+                                            )}
+                                            {log.checkOutLocation === "unknown" && (
+                                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-white/10 text-white/50 border border-white/10">
+                                                Out: no GPS
+                                              </span>
+                                            )}
+                                          </div>
                                         </TableCell>
                                       </TableRow>
                                     ))}

@@ -15,8 +15,23 @@ import {
   AxiosPost,
   AxiosGet,
   AxiosDelete,
+  AxiosPut,
   useAuth,
 } from "@/context/AuthContext";
+import { DEFAULT_GEOFENCE_RADIUS_METERS } from "@/lib/geo";
+
+// Allowed geofence radius range (matches backend validation)
+const MIN_RADIUS_METERS = 10;
+const MAX_RADIUS_METERS = 5000;
+
+const isValidRadius = (value) => {
+  const radius = Number(value);
+  return (
+    Number.isInteger(radius) &&
+    radius >= MIN_RADIUS_METERS &&
+    radius <= MAX_RADIUS_METERS
+  );
+};
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,9 +51,14 @@ export default function MapPage() {
     },
     latitude: "",
     longitude: "",
+    radius_meters: String(DEFAULT_GEOFENCE_RADIUS_METERS),
   });
 
   const [submittedData, setSubmittedData] = useState(null);
+
+  // Radius edits for saved locations: { [location_id]: "150" }
+  const [radiusEdits, setRadiusEdits] = useState({});
+  const [savingRadiusId, setSavingRadiusId] = useState(null);
 
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -475,6 +495,63 @@ export default function MapPage() {
   };
 
   // ---------------------------------------------------------
+  // UPDATE GEOFENCE RADIUS OF A SAVED LOCATION
+  // ---------------------------------------------------------
+
+  const handleUpdateRadius = async (locationId) => {
+    const value = radiusEdits[locationId];
+
+    if (!isValidRadius(value)) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Radius must be a whole number between ${MIN_RADIUS_METERS} and ${MAX_RADIUS_METERS} metres.`,
+      });
+      return;
+    }
+
+    setSavingRadiusId(locationId);
+
+    try {
+      const updated = await AxiosPut(`locations/${locationId}/`, {
+        radius_meters: Number(value),
+      });
+
+      setSavedLocations((prev) =>
+        prev.map((location) =>
+          location.location_id === locationId
+            ? { ...location, radius_meters: updated.radius_meters }
+            : location
+        )
+      );
+
+      setRadiusEdits((prev) => {
+        const next = { ...prev };
+        delete next[locationId];
+        return next;
+      });
+
+      toast({
+        title: "Success",
+        description: `Check-in radius updated to ${updated.radius_meters}m.`,
+      });
+    } catch (error) {
+      console.error("Update radius error:", error);
+
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error.response?.data?.radius_meters?.[0] ||
+          error.response?.data?.detail ||
+          "Failed to update radius",
+      });
+    } finally {
+      setSavingRadiusId(null);
+    }
+  };
+
+  // ---------------------------------------------------------
   // SAVE LOCATION
   // ---------------------------------------------------------
 
@@ -500,6 +577,17 @@ export default function MapPage() {
       return;
     }
 
+    if (!isValidRadius(locationData.radius_meters)) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Check-in radius must be a whole number between ${MIN_RADIUS_METERS} and ${MAX_RADIUS_METERS} metres.`,
+      });
+
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await AxiosPost(
         "locations/",
@@ -514,6 +602,10 @@ export default function MapPage() {
 
           longitude:
             locationData.longitude,
+
+          radius_meters: Number(
+            locationData.radius_meters
+          ),
         }
       );
 
@@ -541,6 +633,7 @@ export default function MapPage() {
         },
         latitude: "",
         longitude: "",
+        radius_meters: String(DEFAULT_GEOFENCE_RADIUS_METERS),
       }));
 
       // Remove temporary marker
@@ -565,6 +658,9 @@ export default function MapPage() {
         title: "Error",
         description:
           error.response?.data?.detail ||
+          error.response?.data?.radius_meters?.[0] ||
+          error.response?.data?.latitude?.[0] ||
+          error.response?.data?.longitude?.[0] ||
           "Failed to save location",
       });
     } finally {
@@ -735,6 +831,60 @@ export default function MapPage() {
                             {location.longitude}
 
                           </p>
+
+                          {/* Check-in radius (editable) */}
+
+                          <div className="flex items-center gap-2 mt-2">
+
+                            <label
+                              htmlFor={`radius-${location.location_id}`}
+                              className="text-xs text-white/50"
+                            >
+                              Check-in radius (m)
+                            </label>
+
+                            <Input
+                              id={`radius-${location.location_id}`}
+                              type="number"
+                              min={MIN_RADIUS_METERS}
+                              max={MAX_RADIUS_METERS}
+                              className="h-8 w-24 bg-white/5 border-white/10 text-xs"
+                              value={
+                                radiusEdits[location.location_id] ??
+                                String(
+                                  location.radius_meters ??
+                                    DEFAULT_GEOFENCE_RADIUS_METERS
+                                )
+                              }
+                              onChange={(e) =>
+                                setRadiusEdits((prev) => ({
+                                  ...prev,
+                                  [location.location_id]: e.target.value,
+                                }))
+                              }
+                            />
+
+                            {radiusEdits[location.location_id] !== undefined &&
+                              String(radiusEdits[location.location_id]) !==
+                                String(location.radius_meters) && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={
+                                    savingRadiusId === location.location_id
+                                  }
+                                  onClick={() =>
+                                    handleUpdateRadius(location.location_id)
+                                  }
+                                  className="h-8 px-3 text-xs"
+                                >
+                                  {savingRadiusId === location.location_id
+                                    ? "Saving..."
+                                    : "Save"}
+                                </Button>
+                              )}
+
+                          </div>
 
                         </div>
 
@@ -942,6 +1092,45 @@ export default function MapPage() {
                     }
                     required
                   />
+
+                </div>
+
+                {/* CHECK-IN RADIUS */}
+
+                <div className="space-y-2 md:col-span-2">
+
+                  <label
+                    htmlFor="radius_meters"
+                    className="text-sm font-medium"
+                  >
+                    Check-in Radius (metres)
+                  </label>
+
+                  <Input
+                    id="radius_meters"
+                    type="number"
+                    min={MIN_RADIUS_METERS}
+                    max={MAX_RADIUS_METERS}
+                    placeholder={String(DEFAULT_GEOFENCE_RADIUS_METERS)}
+                    className="h-11 bg-white/5 border-white/10 w-full"
+                    value={
+                      locationData.radius_meters
+                    }
+                    onChange={(e) =>
+                      setLocationData(
+                        (prev) => ({
+                          ...prev,
+                          radius_meters:
+                            e.target.value,
+                        })
+                      )
+                    }
+                    required
+                  />
+
+                  <p className="text-xs text-white/50">
+                    Employees must be within this distance of the office to check in ({MIN_RADIUS_METERS} to {MAX_RADIUS_METERS}m).
+                  </p>
 
                 </div>
 
