@@ -488,18 +488,18 @@ export default function EmployeePage() {
   return (
     <>
       <Sidebar />
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background">
         <div className="flex justify-between items-center">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold">Employee Management</h1>
+            <h1 className="text-2xl font-bold tracking-tight page-title">Employee Management</h1>
             {designationFilter && (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
                   Filter: {getDesignationName(designationFilter)}
                 </span>
                 <Button 
                   variant="ghost" 
-                  className="h-5 px-1.5 text-[9px] uppercase font-bold text-white/40 hover:text-white"
+                  className="h-5 px-1.5 text-xs font-bold text-foreground/40 hover:text-foreground"
                   onClick={() => router.push("/employees")}
                 >
                   Clear Filter
@@ -535,7 +535,7 @@ export default function EmployeePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="quantanex-card p-6 border-white/5">
+          <Card className="quantanex-card p-6 border-foreground/5">
             <h2 className="text-lg font-semibold mb-4">Add New Employee</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -570,9 +570,9 @@ export default function EmployeePage() {
                   value={formData.mobile_number ? `91${formData.mobile_number}` : ""}
                   onChange={handlePhoneChange}
                   containerClass="!bg-transparent"
-                  inputClass="!w-full !h-10 !bg-white/5 !border-white/10 !text-white !rounded-lg focus:!border-primary/50 focus:!ring-1 focus:!ring-primary/50 transition-all"
-                  buttonClass="!bg-transparent !border-white/10 !rounded-l-lg"
-                  dropdownClass="!bg-[#11141b] !text-white !border-white/10"
+                  inputClass="!w-full !h-10 !bg-foreground/5 !border-foreground/10 !text-foreground !rounded-lg focus:!border-primary/50 focus:!ring-1 focus:!ring-primary/50 transition-all"
+                  buttonClass="!bg-transparent !border-foreground/10 !rounded-l-lg"
+                  dropdownClass="!bg-card !text-foreground !border-foreground/10"
                   inputProps={{
                     name: "mobile_number",
                     required: true,
@@ -695,7 +695,7 @@ export default function EmployeePage() {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] h-10 shadow-lg shadow-primary/10" disabled={isSubmitting}>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs h-10 shadow-lg shadow-primary/10" disabled={isSubmitting}>
                   {isSubmitting ? "Adding..." : (
                     <>
                       <UserPlus className="mr-2 h-4 w-4" />
@@ -707,7 +707,7 @@ export default function EmployeePage() {
             </form>
           </Card>
 
-          <Card className="quantanex-card p-6 col-span-2 border-white/5">
+          <Card className="quantanex-card p-6 col-span-2 border-foreground/5">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">All Employees</h2>
               <div className="flex items-center gap-2">
@@ -730,48 +730,48 @@ export default function EmployeePage() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
-                        <th className="py-3 text-left">Name</th>
-                        <th className="py-3 text-left">Mobile</th>
-                        <th className="py-3 text-left">Email</th>
-                        <th className="py-3 text-left">Department</th>
-                        <th className="py-3 text-left">Designation</th>
-                        <th className="py-3 text-left">Shift</th>
-                        <th className="py-3 text-left">Location</th>
-                        <th className="py-3 text-right">Actions</th>
+                      <tr className="bg-muted text-xs font-medium text-muted-foreground">
+                        <th className="py-3 px-3 text-left">Name</th>
+                        <th className="py-3 px-3 text-left">Mobile</th>
+                        <th className="py-3 px-3 text-left">Email</th>
+                        <th className="py-3 px-3 text-left">Department</th>
+                        <th className="py-3 px-3 text-left">Designation</th>
+                        <th className="py-3 px-3 text-left">Shift</th>
+                        <th className="py-3 px-3 text-left">Location</th>
+                        <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentEmployees.map((employee) => (
                         <tr
                           key={employee.employee_id}
-                          className="border-b border-white/5 hover:bg-white/[0.03] transition-colors group"
+                          className="border-b border-foreground/5 hover:bg-foreground/[0.03] transition-colors group"
                         >
-                          <td className="py-3 font-medium text-white/90">{`${employee.first_name} ${employee.last_name}`}</td>
-                          <td className="py-3 text-white/60">{employee.mobile_number}</td>
-                          <td className="py-3 text-white/60">{employee.email}</td>
-                          <td className="py-3">
-                            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] border border-blue-500/20">
+                          <td className="py-3 px-3 font-medium text-foreground/90">{`${employee.first_name} ${employee.last_name}`}</td>
+                          <td className="py-3 px-3 text-foreground/60">{employee.mobile_number}</td>
+                          <td className="py-3 px-3 text-foreground/60">{employee.email}</td>
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs border border-blue-500/20">
                               {employee.department_name || "N/A"}
                             </span>
                           </td>
-                          <td className="py-3">
-                            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 text-[10px] border border-purple-500/20">
+                          <td className="py-3 px-3">
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs border border-purple-500/20">
                               {employee.designation_name || "N/A"}
                             </span>
                           </td>
-                          <td className="py-3 text-white/60">
+                          <td className="py-3 px-3 text-foreground/60">
                             {employee.shift_name || "N/A"}
                           </td>
-                          <td className="py-3 text-white/60">
+                          <td className="py-3 px-3 text-foreground/60">
                             {employee.location_name || "N/A"}
                           </td>
-                          <td className="py-3 text-right">
+                          <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-white/40 hover:text-primary hover:bg-primary/10"
+                                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10" title="View ID card"
                                 onClick={() => setSelectedEmployeeForCard(employee)}
                               >
                                 <IdCard className="h-4 w-4" />
@@ -781,21 +781,21 @@ export default function EmployeePage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-white/40 hover:text-destructive hover:bg-destructive/10 transition-all"
+                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="bg-[#0f1117] border-white/10 text-white">
+                                <AlertDialogContent className="bg-card border-foreground/10 text-foreground">
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Employee</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-white/60">
+                                    <AlertDialogDescription className="text-foreground/60">
                                       Are you sure you want to delete {employee.first_name} {employee.last_name}? 
                                       This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5">Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel className="bg-transparent border-foreground/10 text-foreground hover:bg-foreground/5">Cancel</AlertDialogCancel>
                                     <AlertDialogAction 
                                       className="bg-destructive text-white hover:bg-destructive/90"
                                       onClick={() => handleDelete(employee.employee_id)}

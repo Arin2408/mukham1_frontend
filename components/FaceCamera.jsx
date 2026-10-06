@@ -75,7 +75,7 @@ export default function FaceCamera({ onCapture, isLoading, isRegistered }) {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl bg-black">
+      <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-primary/20 shadow-xl bg-card">
         {isCameraActive && !capturedImage && (
           <video
             ref={videoRef}
@@ -103,7 +103,7 @@ export default function FaceCamera({ onCapture, isLoading, isRegistered }) {
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 p-4 text-center">
             <AlertCircle className="h-8 w-8 text-destructive mb-2" />
-            <p className="text-[10px] text-destructive font-medium">{error}</p>
+            <p className="text-xs text-destructive font-medium">{error}</p>
           </div>
         )}
         
@@ -139,7 +139,7 @@ export default function FaceCamera({ onCapture, isLoading, isRegistered }) {
         )}
       </div>
       
-      <p className="text-[10px] text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center">
         {isRegistered 
           ? "Align your face in the circle for verification." 
           : "This will be your base image for future logins."}

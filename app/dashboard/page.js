@@ -54,15 +54,15 @@ const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3
 const chartMargin = { top: 10, right: 30, left: 0, bottom: 0 }
 const tooltipStyle = {
   contentStyle: {
-    backgroundColor: '#11141b',
-    border: '1px solid rgba(255,255,255,0.1)',
+    backgroundColor: 'hsl(var(--popover))',
+    border: '1px solid hsl(var(--border))',
     borderRadius: '8px',
     padding: '8px',
     fontSize: '12px'
   },
-  itemStyle: { color: '#fff' },
-  labelStyle: { color: '#fff' },
-  cursor: { fill: 'rgba(255,255,255,0.05)' }
+  itemStyle: { color: 'hsl(var(--popover-foreground))' },
+  labelStyle: { color: 'hsl(var(--popover-foreground))' },
+  cursor: { fill: 'rgba(128,128,128,0.1)' }
 }
 
 export default function DashboardPage() {
@@ -149,11 +149,11 @@ export default function DashboardPage() {
   return (
     <>
       <Sidebar />
-      <div className="min-h-screen bg-[#0b0e14] relative selection:bg-primary/30 ml-64">
+      <div className="min-h-screen bg-background relative selection:bg-primary/30 lg:ml-[var(--sidebar-w)] transition-[margin] duration-300">
         <div className="p-6 lg:p-10 space-y-8 relative z-10 max-w-[1600px] mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard</h1>
+              <h1 className="text-2xl font-bold tracking-tight page-title">Dashboard</h1>
               <p className="text-muted-foreground text-sm">Organization health today. Secure tomorrow.</p>
             </div>
           </div>
@@ -166,26 +166,18 @@ export default function DashboardPage() {
               { label: "Active Shifts", value: dashboardStats.activeShifts.toString(), sub: "Patterns", color: "orange", trend: "Current Config", icon: Clock },
               { label: "Active Locations", value: dashboardStats.activeLocations.toString(), sub: "Sites", color: "green", trend: "GPS Verified", icon: MapPin },
             ].map((stat, i) => (
-              <Card key={i} className="quantanex-card p-6 group relative overflow-hidden">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl bg-accent-${stat.color}-10 border border-${stat.color}-500/20`}>
-                    <stat.icon className={`h-6 w-6 text-${stat.color}-500`} />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
-                    <div className="flex items-baseline justify-end gap-1">
-                      <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
-                      <span className="text-xs text-muted-foreground">{stat.sub}</span>
-                    </div>
+              <Card key={i} className={`${i % 2 === 0 ? "stat-card-blue" : "stat-card-purple"} p-4`}>
+                <div className="flex items-start justify-between">
+                  <p className="text-base text-foreground">{stat.label}</p>
+                  <div className={`p-2 rounded-lg ${i % 2 === 0 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-purple-500/10 text-purple-600 dark:text-purple-400"}`}>
+                    <stat.icon className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-2">
-                   <p className={`text-[10px] font-bold uppercase ${stat.color === 'red' ? 'text-red-500' : 'text-green-500'}`}>
-                    {stat.trend}
-                  </p>
-                  {/* Miniature Sparkline Placeholder Accent */}
-                  <div className={`mt-1 h-1 w-full rounded-full sparkline-${stat.color === 'red' ? 'red' : 'blue'} opacity-50`} />
+                <div className="mt-3 flex items-baseline gap-1">
+                  <h3 className="text-3xl font-bold text-foreground">{stat.value}</h3>
+                  <span className="text-xs text-muted-foreground">{stat.sub}</span>
                 </div>
+                <p className="mt-1 text-sm text-muted-foreground">{stat.trend}</p>
               </Card>
             ))}
           </div>
@@ -193,13 +185,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Role Distribution (Donut Chart) */}
             <Card className="quantanex-card p-8 lg:col-span-1">
-              <h3 className="text-lg font-semibold text-white mb-1">Role Distribution</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Role Distribution</h3>
               <p className="text-xs text-muted-foreground mb-8">Breakdown of organizational roles</p>
               
               <div className="h-[250px] relative">
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xl font-bold text-white">{dashboardStats.totalEmployees}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Total</span>
+                  <span className="text-3xl font-bold text-foreground">{dashboardStats.totalEmployees}</span>
+                  <span className="text-xs text-muted-foreground font-bold">Total</span>
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -225,9 +217,9 @@ export default function DashboardPage() {
                   <div key={role.name} className="flex items-center justify-between group cursor-default">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-sm text-muted-foreground group-hover:text-white transition-colors">{role.name}</span>
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{role.name}</span>
                     </div>
-                    <span className="text-sm font-medium text-white">{role.value} ({(role.value/dashboardStats.totalEmployees*100).toFixed(0)}%)</span>
+                    <span className="text-sm font-medium text-foreground">{role.value} ({(role.value/dashboardStats.totalEmployees*100).toFixed(0)}%)</span>
                   </div>
                 )) : (
                   <p className="text-xs text-muted-foreground text-center">No data found</p>
@@ -239,11 +231,11 @@ export default function DashboardPage() {
             <Card className="quantanex-card p-8 lg:col-span-2">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Weekly Attendance</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Weekly Attendance</h3>
                   <p className="text-xs text-muted-foreground">Percentage of presence per day</p>
                 </div>
                 <Link href="/attendance">
-                  <Button variant="link" className="text-[#4f46e5] text-xs font-bold uppercase tracking-widest hover:text-[#4338ca] transition-colors">
+                  <Button variant="link" className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:text-blue-300 transition-colors">
                     View full report →
                   </Button>
                 </Link>
@@ -257,22 +249,22 @@ export default function DashboardPage() {
                         <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.2)" />
                     <XAxis 
                       dataKey="name"
-                      stroke="rgba(255,255,255,0.3)"
+                      stroke="rgba(128,128,128,0.8)"
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
                       dy={10}
                     />
                     <YAxis
-                      stroke="rgba(255,255,255,0.3)"
+                      stroke="rgba(128,128,128,0.8)"
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
                     />
-                    <Tooltip {...tooltipStyle} cursor={{fill: 'rgba(255,255,255,0.03)'}} />
+                    <Tooltip {...tooltipStyle} cursor={{fill: 'rgba(128,128,128,0.1)'}} />
                     <Bar 
                       dataKey="attendance" 
                       fill="url(#barGradient)"

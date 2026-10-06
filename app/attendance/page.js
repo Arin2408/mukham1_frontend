@@ -193,17 +193,17 @@ export default function AttendancePage() {
   return (
     <>
       <Sidebar/>
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a] text-white">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background text-foreground">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Attendance Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight page-title">Attendance Management</h1>
           {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 col-span-1 bg-white/5 border-white/10">
+          <Card className="quantanex-card p-6 col-span-1">
             <h3 className="text-lg font-semibold mb-2">Manual Mark</h3>
             <div className="space-y-4">
-              <div className="rounded-md border border-white/10 bg-white/5 overflow-hidden">
+              <div className="rounded-xl border border-border overflow-hidden">
                 <Calendar
                   mode="single"
                   selected={date}
@@ -212,12 +212,12 @@ export default function AttendancePage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select Employee</label>
+                <label className="text-xs font-bold text-muted-foreground">Select Employee</label>
                 <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground">
                     <SelectValue placeholder="Choose employee..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0f1117] border-white/10 text-white">
+                  <SelectContent>
                     {employees.map((employee) => (
                       <SelectItem key={employee.employee_id} value={employee.employee_id.toString()}>
                         {employee.first_name} {employee.last_name} (EMP{employee.employee_id})
@@ -228,7 +228,7 @@ export default function AttendancePage() {
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button 
-                  className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
+                  className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30"
                   onClick={handleCheckIn}
                   disabled={isLoading}
                 >
@@ -236,7 +236,7 @@ export default function AttendancePage() {
                   Check In
                 </Button>
                 <Button 
-                  className="bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 border border-rose-500/30"
+                  className="bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/30 border border-rose-500/30"
                   onClick={handleCheckOut}
                   disabled={isLoading}
                 >
@@ -247,7 +247,7 @@ export default function AttendancePage() {
             </div>
           </Card>
 
-          <Card className="p-6 col-span-1 md:col-span-2 bg-white/5 border-white/10">
+          <Card className="quantanex-card p-6 col-span-1 md:col-span-2">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
               <h3 className="text-lg font-semibold">
                 Live History{" "}
@@ -257,22 +257,22 @@ export default function AttendancePage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search name or ID..."
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="pl-10 bg-foreground/5 border-foreground/10 text-foreground"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             
-            <div className="overflow-x-auto rounded-xl border border-white/5">
+            <div className="overflow-x-auto rounded-xl border border-border">
               <Table>
-                <TableHeader className="bg-white/5">
-                  <TableRow className="border-white/5 hover:bg-transparent">
+                <TableHeader>
+                  <TableRow className="border-foreground/5 hover:bg-transparent">
                     <TableHead className="w-[50px]"></TableHead>
-                    <TableHead className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest">Employee ID</TableHead>
-                    <TableHead className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest">Name</TableHead>
-                    <TableHead className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest">Logs</TableHead>
-                    <TableHead className="text-muted-foreground font-bold text-[10px] uppercase tracking-widest">Hours</TableHead>
+                    <TableHead className="text-muted-foreground font-bold text-xs">Employee ID</TableHead>
+                    <TableHead className="text-muted-foreground font-bold text-xs">Name</TableHead>
+                    <TableHead className="text-muted-foreground font-bold text-xs">Logs</TableHead>
+                    <TableHead className="text-muted-foreground font-bold text-xs">Hours</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -286,31 +286,32 @@ export default function AttendancePage() {
                     filteredEmployees.map((employee) => (
                       <React.Fragment key={`group-${employee.employeeId}`}>
                         <TableRow 
-                          className={`cursor-pointer transition-colors border-white/5 ${expandedEmployee === employee.employeeId ? 'bg-white/10' : 'hover:bg-white/[0.02]'}`}
+                          className={`cursor-pointer transition-colors border-foreground/5 ${expandedEmployee === employee.employeeId ? 'bg-primary/5' : 'hover:bg-foreground/[0.03]'}`}
                           onClick={() => handleExpandEmployee(employee.employeeId)}
                         >
                           <TableCell>
                             {expandedEmployee === employee.employeeId ? (
                               <ChevronDown className="h-4 w-4 text-primary" />
                             ) : (
-                              <ChevronRight className="h-4 w-4 text-white/20" />
+                              <ChevronRight className="h-4 w-4 text-foreground/20" />
                             )}
                           </TableCell>
                           <TableCell className="font-mono text-primary text-xs">{employee.employeeId}</TableCell>
-                          <TableCell className="font-bold text-white/90">{employee.name}</TableCell>
+                          <TableCell className="font-bold text-foreground/90">{employee.name}</TableCell>
                           <TableCell>
-                            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-foreground/10 text-xs font-bold">
                               {employee.totalDays} entries
                             </span>
                           </TableCell>
-                          <TableCell className="font-mono text-emerald-400 font-bold">{employee.totalHours.toFixed(1)}h</TableCell>
+                          <TableCell className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{employee.totalHours.toFixed(1)}h</TableCell>
                         </TableRow>
                         {expandedEmployee === employee.employeeId && (
                           <TableRow key={`details-${employee.employeeId}`}>
-                            <TableCell colSpan={5} className="p-0 bg-black/40">
-                              <div className="p-4 border-l-2 border-primary ml-10 my-2">
+                            <TableCell colSpan={5} className="p-0 bg-muted/40">
+                              <div className="my-3 ml-10 mr-4 rounded-lg border border-border border-l-2 border-l-primary bg-card overflow-hidden">
                                 <Table>
                                   <TableHeader>
+<<<<<<< HEAD
                                     <TableRow className="border-white/5 hover:bg-transparent">
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Date</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">In</TableHead>
@@ -318,18 +319,26 @@ export default function AttendancePage() {
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Work</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Status</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Flags</TableHead>
+=======
+                                    <TableRow className="border-foreground/5 hover:bg-transparent">
+                                      <TableHead className="text-xs tracking-tight text-muted-foreground">Date</TableHead>
+                                      <TableHead className="text-xs tracking-tight text-muted-foreground">In</TableHead>
+                                      <TableHead className="text-xs tracking-tight text-muted-foreground">Out</TableHead>
+                                      <TableHead className="text-xs tracking-tight text-muted-foreground">Work</TableHead>
+                                      <TableHead className="text-xs tracking-tight text-muted-foreground">Status</TableHead>
+>>>>>>> 662eb9d28a0a58fb58b4b3f502dc698a7b3a7e3d
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
                                     {employee.logs.map((log) => (
-                                      <TableRow key={`log-${log.id}`} className="border-white/5 hover:bg-white/5">
-                                        <TableCell className="text-xs text-white/60">{log.date}</TableCell>
-                                        <TableCell className="text-xs font-mono text-emerald-400">{log.checkIn}</TableCell>
-                                        <TableCell className="text-xs font-mono text-rose-400">{log.checkOut}</TableCell>
+                                      <TableRow key={`log-${log.id}`} className="border-foreground/5 hover:bg-foreground/5">
+                                        <TableCell className="text-xs text-foreground/60">{log.date}</TableCell>
+                                        <TableCell className="text-xs font-mono text-emerald-600 dark:text-emerald-400">{log.checkIn}</TableCell>
+                                        <TableCell className="text-xs font-mono text-rose-600 dark:text-rose-400">{log.checkOut}</TableCell>
                                         <TableCell className="text-xs font-bold">{log.workHours}h</TableCell>
                                         <TableCell>
-                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                                            log.status === 'Present' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                                            log.status === 'Present' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                                           }`}>
                                             {log.status}
                                           </span>

@@ -1,10 +1,10 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Archivo } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '../context/AuthContext';
 
-const inter = Inter({ subsets: ['latin'] });
+const archivo = Archivo({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Mukham - Organization Management',
@@ -14,8 +14,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
+      <body className={archivo.className}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <AuthProvider> 
             {children}
             <Toaster />

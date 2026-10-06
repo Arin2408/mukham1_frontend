@@ -60,14 +60,14 @@ import {
 
 const tooltipStyle = {
   contentStyle: {
-    backgroundColor: "#11141b",
-    border: "1px solid rgba(255,255,255,0.1)",
+    backgroundColor: "hsl(var(--popover))",
+    border: "1px solid hsl(var(--border))",
     borderRadius: "8px",
     padding: "8px",
     fontSize: "12px",
   },
-  itemStyle: { color: "#fff" },
-  cursor: { fill: "rgba(255,255,255,0.05)" },
+  itemStyle: { color: "hsl(var(--popover-foreground))" },
+  cursor: { fill: "rgba(128,128,128,0.1)" },
 };
 
 const emptyEmployeeData = {
@@ -771,7 +771,7 @@ export default function MemberPortal() {
 
   if (!isMounted) {
     return (
-      <div className="min-h-screen bg-[#0b0e14]" />
+      <div className="min-h-screen bg-background" />
     );
   }
 
@@ -780,17 +780,17 @@ export default function MemberPortal() {
   // ---------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white selection:bg-primary/30 flex">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 flex">
       <Sidebar />
 
-      <main className="lg:ml-64 ml-0 p-4 lg:p-10 space-y-10 max-w-[1600px] mx-auto relative z-10 w-full">
+      <main className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 ml-0 p-4 lg:p-10 space-y-10 max-w-[1600px] mx-auto relative z-10 w-full">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 
           <div className="space-y-1">
 
-            <h1 className="text-3xl font-bold tracking-tight text-white uppercase">
+            <h1 className="text-2xl font-bold tracking-tight page-title">
               {activeTab === "dashboard"
                 ? "Command Center"
                 : "Member Profile"}
@@ -806,11 +806,11 @@ export default function MemberPortal() {
 
           </div>
 
-          <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
+          <div className="flex items-center gap-3 bg-foreground/5 px-4 py-2 rounded-lg border border-foreground/10">
 
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
 
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <span className="text-xs font-bold text-muted-foreground">
               Authorized Access
             </span>
 
@@ -832,11 +832,11 @@ export default function MemberPortal() {
 
                 <div className="relative z-10">
 
-                  <h2 className="text-4xl font-black text-white tracking-tighter mb-1">
+                  <h2 className="text-4xl font-bold text-foreground tracking-tight mb-1">
                     {formatTime(currentTime)}
                   </h2>
 
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                  <p className="text-xs font-bold text-primary">
                     {currentTime?.toLocaleDateString([], {
                       weekday: "long",
                       month: "short",
@@ -888,11 +888,11 @@ export default function MemberPortal() {
 
                     <div className="text-right">
 
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                      <p className="text-xs font-bold text-muted-foreground mb-1">
                         {stat.label}
                       </p>
 
-                      <h3 className="text-lg font-bold text-white truncate max-w-[150px]">
+                      <h3 className="text-lg font-bold text-foreground truncate max-w-[150px]">
                         {stat.value}
                       </h3>
 
@@ -916,7 +916,7 @@ export default function MemberPortal() {
 
                   <div>
 
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">
+                    <h3 className="text-lg font-bold text-foreground tracking-tight">
                       Session Controller
                     </h3>
 
@@ -932,7 +932,7 @@ export default function MemberPortal() {
 
                       <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
 
-                      <span className="text-[10px] font-bold text-green-500">
+                      <span className="text-xs font-bold text-green-500">
                         LIVE SESSION
                       </span>
 
@@ -944,11 +944,11 @@ export default function MemberPortal() {
 
                 {Object.keys(activeShifts).length === 0 ? (
 
-                  <div className="flex flex-col sm:flex-row items-end gap-4 bg-white/[0.02] p-6 rounded-xl border border-white/5">
+                  <div className="flex flex-col sm:flex-row items-end gap-4 bg-foreground/[0.02] p-6 rounded-xl border border-foreground/5">
 
                     <div className="flex-1 w-full space-y-2">
 
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">
+                      <label className="text-xs font-bold text-muted-foreground ml-1">
                         Identify Active Shift
                       </label>
 
@@ -963,11 +963,11 @@ export default function MemberPortal() {
                         }
                       >
 
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+                        <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground h-12">
                           <SelectValue placeholder="Select shift..." />
                         </SelectTrigger>
 
-                        <SelectContent className="bg-[#11141b] border-white/10 text-white">
+                        <SelectContent>
 
                           {employeeData.availableShifts.map(
                             (s) => (
@@ -995,7 +995,7 @@ export default function MemberPortal() {
                         !selectedShift ||
                         !canStartShift(selectedShift)
                       }
-                      className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+                      className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/20"
                     >
                       <MapPin className="mr-2 h-4 w-4" />
                       Start Shift
@@ -1023,7 +1023,7 @@ export default function MemberPortal() {
 
                           <div>
 
-                            <p className="text-sm font-bold text-white uppercase">
+                            <p className="text-sm font-bold text-foreground">
                               {info.shift.name}
                             </p>
 
@@ -1041,7 +1041,7 @@ export default function MemberPortal() {
                           onClick={() =>
                             handleEndShift(id)
                           }
-                          className="mt-4 sm:mt-0 bg-red-600 hover:bg-red-700 text-white px-8 h-12 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-red-900/20 border-none"
+                          className="mt-4 sm:mt-0 bg-red-600 hover:bg-red-700 text-white px-8 h-12 font-bold text-xs shadow-lg shadow-red-900/20 border-none"
                         >
                           End Session
                         </Button>
@@ -1058,19 +1058,19 @@ export default function MemberPortal() {
               {/* ACTIVITY LOGS */}
               <Card className="quantanex-card p-0 flex flex-col overflow-hidden">
 
-                <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                <div className="p-6 border-b border-foreground/5 bg-foreground/[0.02]">
 
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-foreground">
                     Verified Activity
                   </h3>
 
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                  <p className="text-xs font-bold text-muted-foreground mt-1">
                     Last 7 sessions
                   </p>
 
                 </div>
 
-                <div className="flex-1 overflow-auto max-h-[400px] divide-y divide-white/5 scrollbar-hide">
+                <div className="flex-1 overflow-auto max-h-[400px] divide-y divide-foreground/5 scrollbar-hide">
 
                   {Object.values(
                     [
@@ -1095,7 +1095,7 @@ export default function MemberPortal() {
 
                       <div
                         key={i}
-                        className="p-4 flex justify-between items-center hover:bg-white/[0.02] transition-colors"
+                        className="p-4 flex justify-between items-center hover:bg-foreground/[0.02] transition-colors"
                       >
 
                         <div className="flex items-center gap-3">
@@ -1104,11 +1104,11 @@ export default function MemberPortal() {
 
                           <div>
 
-                            <p className="text-[10px] font-bold text-white uppercase">
+                            <p className="text-xs font-bold text-foreground">
                               {r.shift}
                             </p>
 
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {r.date}
                             </p>
 
@@ -1118,11 +1118,11 @@ export default function MemberPortal() {
 
                         <div className="text-right">
 
-                          <p className="text-[10px] font-bold text-green-500 uppercase">
+                          <p className="text-xs font-bold text-green-500">
                             {r.status}
                           </p>
 
-                          <p className="text-[10px] text-muted-foreground font-mono">
+                          <p className="text-xs text-muted-foreground font-mono">
                             {r.hours} HRS
                           </p>
 
@@ -1143,11 +1143,11 @@ export default function MemberPortal() {
 
               <div className="flex justify-between items-center mb-8">
 
-                <h3 className="text-xl font-bold text-white uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-foreground tracking-tight">
                   Hours Analytics
                 </h3>
 
-                <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                <p className="text-xs font-bold text-primary">
                   Efficiency Report
                 </p>
 
@@ -1194,13 +1194,13 @@ export default function MemberPortal() {
 
                           <stop
                             offset="0%"
-                            stopColor="#4f46e5"
+                            stopColor="#2563eb"
                             stopOpacity={1}
                           />
 
                           <stop
                             offset="100%"
-                            stopColor="#4f46e5"
+                            stopColor="#2563eb"
                             stopOpacity={0.3}
                           />
 
@@ -1211,12 +1211,12 @@ export default function MemberPortal() {
                       <CartesianGrid
                         strokeDasharray="3 3"
                         vertical={false}
-                        stroke="rgba(255,255,255,0.05)"
+                        stroke="rgba(128,128,128,0.2)"
                       />
 
                       <XAxis
                         dataKey="date"
-                        stroke="rgba(255,255,255,0.4)"
+                        stroke="rgba(128,128,128,0.8)"
                         fontSize={11}
                         tickLine={false}
                         axisLine={false}
@@ -1224,7 +1224,7 @@ export default function MemberPortal() {
                       />
 
                       <YAxis
-                        stroke="rgba(255,255,255,0.4)"
+                        stroke="rgba(128,128,128,0.8)"
                         fontSize={11}
                         tickLine={false}
                         axisLine={false}
@@ -1267,7 +1267,7 @@ export default function MemberPortal() {
 
               <div className="relative mb-6">
 
-                <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-black text-white">
+                <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-bold text-foreground">
 
                   {employeeData.name
                     .split(" ")
@@ -1276,7 +1276,7 @@ export default function MemberPortal() {
 
                 </div>
 
-                <div className="absolute -bottom-1 -right-1 p-2 bg-green-500 rounded-full border-4 border-[#11141b]">
+                <div className="absolute -bottom-1 -right-1 p-2 bg-green-500 rounded-full border-4 border-card">
 
                   <ShieldCheck className="h-4 w-4 text-white" />
 
@@ -1284,31 +1284,31 @@ export default function MemberPortal() {
 
               </div>
 
-              <h2 className="text-2xl font-bold text-white mb-1">
+              <h2 className="text-2xl font-bold text-foreground mb-1">
                 {employeeData.name}
               </h2>
 
-              <p className="text-xs font-bold text-primary uppercase tracking-widest mb-6">
+              <p className="text-xs font-bold text-primary mb-6">
                 {employeeData.id}
               </p>
 
-              <div className="w-full space-y-3 mt-4 pt-4 border-t border-white/5">
+              <div className="w-full space-y-3 mt-4 pt-4 border-t border-foreground/5">
 
-                <div className="flex items-center gap-3 text-left p-3 rounded-xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3 text-left p-3 rounded-xl bg-foreground/5 border border-foreground/5">
 
                   <Mail className="h-4 w-4 text-muted-foreground" />
 
-                  <p className="text-xs text-white truncate">
+                  <p className="text-xs text-foreground truncate">
                     {employeeData.email}
                   </p>
 
                 </div>
 
-                <div className="flex items-center gap-3 text-left p-3 rounded-xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3 text-left p-3 rounded-xl bg-foreground/5 border border-foreground/5">
 
                   <Phone className="h-4 w-4 text-muted-foreground" />
 
-                  <p className="text-xs text-white">
+                  <p className="text-xs text-foreground">
                     Confidential
                   </p>
 
@@ -1319,7 +1319,7 @@ export default function MemberPortal() {
               <Button
                 onClick={logoutUser}
                 variant="outline"
-                className="w-full mt-8 border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 gap-2 font-bold uppercase tracking-widest text-[10px] h-11"
+                className="w-full mt-8 border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 gap-2 font-bold text-xs h-11"
               >
                 <LogOut className="h-4 w-4" />
                 Terminate Session
@@ -1331,44 +1331,44 @@ export default function MemberPortal() {
 
               <Card className="quantanex-card p-8">
 
-                <h3 className="text-lg font-bold text-white uppercase tracking-widest mb-8 border-b border-white/5 pb-4">
+                <h3 className="text-lg font-bold text-foreground mb-8 border-b border-foreground/5 pb-4">
                   Deployment Status
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <p className="text-xs font-bold text-muted-foreground">
                       Department
                     </p>
-                    <p className="text-xl font-bold text-white">
+                    <p className="text-xl font-bold text-foreground">
                       {employeeData.department}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <p className="text-xs font-bold text-muted-foreground">
                       Designation
                     </p>
-                    <p className="text-xl font-bold text-white">
+                    <p className="text-xl font-bold text-foreground">
                       {employeeData.designation}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <p className="text-xs font-bold text-muted-foreground">
                       Primary Office
                     </p>
-                    <p className="text-xl font-bold text-white">
+                    <p className="text-xl font-bold text-foreground">
                       Main Command Center
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <p className="text-xs font-bold text-muted-foreground">
                       Contract Type
                     </p>
-                    <p className="text-xl font-bold text-green-500 uppercase">
+                    <p className="text-xl font-bold text-green-500">
                       Permanent
                     </p>
                   </div>
@@ -1389,7 +1389,7 @@ export default function MemberPortal() {
 
                   <div>
 
-                    <h4 className="font-bold text-white uppercase tracking-tight">
+                    <h4 className="font-bold text-foreground tracking-tight">
                       Security Clearance Active
                     </h4>
 
@@ -1426,11 +1426,11 @@ export default function MemberPortal() {
         }}
       >
 
-        <DialogContent className="bg-[#11141b] border-white/10 text-white max-w-md rounded-2xl overflow-hidden p-0">
+        <DialogContent className="bg-card border-foreground/10 text-foreground max-w-md rounded-2xl overflow-hidden p-0">
 
-          <DialogHeader className="p-6 border-b border-white/5 bg-white/[0.02]">
+          <DialogHeader className="p-6 border-b border-foreground/5 bg-foreground/[0.02]">
 
-            <DialogTitle className="text-xl font-bold text-center uppercase tracking-tight">
+            <DialogTitle className="text-xl font-bold text-center tracking-tight">
               Biometric Audit
             </DialogTitle>
 
@@ -1449,7 +1449,7 @@ export default function MemberPortal() {
 
                 <MapPin className="h-16 w-16 text-primary animate-bounce mx-auto" />
 
-                <p className="text-xs font-bold uppercase tracking-widest text-primary animate-pulse">
+                <p className="text-xs font-bold text-primary animate-pulse">
                   Detecting Your Location
                 </p>
 
@@ -1481,7 +1481,7 @@ export default function MemberPortal() {
 
                 )}
 
-                <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-black aspect-video shadow-2xl">
+                <div className="relative rounded-2xl overflow-hidden border-2 border-foreground/10 bg-card aspect-video shadow-2xl">
 
                   <Webcam
                     audio={false}
@@ -1496,7 +1496,7 @@ export default function MemberPortal() {
 
                 <Button
                   onClick={captureAndVerify}
-                  className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-xl shadow-primary/20"
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Authorize Session
@@ -1513,7 +1513,7 @@ export default function MemberPortal() {
 
                 <Loader2 className="h-14 w-14 text-primary animate-spin mx-auto" />
 
-                <p className="text-sm font-bold text-white uppercase tracking-widest">
+                <p className="text-sm font-bold text-foreground">
                   Verifying Face
                 </p>
 
@@ -1536,7 +1536,7 @@ export default function MemberPortal() {
 
                 </div>
 
-                <h3 className="text-xl font-black text-white tracking-tight uppercase">
+                <h3 className="text-xl font-bold text-foreground tracking-tight">
                   Session Verified
                 </h3>
 
@@ -1557,7 +1557,7 @@ export default function MemberPortal() {
 
                   <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
 
-                  <p className="text-sm text-red-400">
+                  <p className="text-sm text-red-600 dark:text-red-400">
                     {error || "Verification failed."}
                   </p>
 
@@ -1570,7 +1570,7 @@ export default function MemberPortal() {
                     setVerificationStep("none");
                   }}
                   variant="outline"
-                  className="w-full border-white/10 text-white"
+                  className="w-full border-foreground/10 text-foreground"
                 >
                   Close
                 </Button>

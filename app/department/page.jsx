@@ -331,31 +331,31 @@ export default function DepartmentPage() {
   return (
     <>
       <Sidebar />
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Department Management</h1>
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background">
+        <h1 className="text-2xl font-bold tracking-tight page-title">Department Management</h1>
 
         {/* 🏆 Attendance Leaderboard */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="p-6 bg-white/5 border-white/10 col-span-1 md:col-span-4">
+          <Card className="quantanex-card p-6 col-span-1 md:col-span-4">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-1.5 h-6 bg-yellow-500 rounded-full" />
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 Attendance Leaderboard
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {leaderboard.map((item, index) => (
-                <div key={item.department_id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 hover:border-yellow-500/50 transition-all group">
+                <div key={item.department_id} className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border hover:border-yellow-500/50 transition-all group">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl font-black italic text-white/20 group-hover:text-yellow-500/40 transition-colors"> </span>
+                    <span className="text-2xl font-bold  text-foreground/20 group-hover:text-yellow-500/40 transition-colors"> </span>
                     <div>
-                      <p className="text-sm font-semibold text-white">{item.department_name}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.total_attendances} Records</p>
+                      <p className="text-sm font-semibold text-foreground">{item.department_name}</p>
+                      <p className="text-xs text-muted-foreground">{item.total_attendances} Records</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-yellow-500">{item.punctuality_score}%</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">Punctuality</p>
+                    <p className="text-xs text-muted-foreground tracking-tight">Punctuality</p>
                   </div>
                 </div>
               ))}
@@ -374,7 +374,7 @@ export default function DepartmentPage() {
                   readOnly
                   placeholder="Enter organization name"
                   value={formData.org.name}
-                  className="h-11 bg-white/5 border-white/10 w-full"
+                  className="h-11 bg-foreground/5 border-foreground/10 w-full"
                 />
               </div>
 
@@ -384,7 +384,7 @@ export default function DepartmentPage() {
                   value={formData.details}
                   onChange={(e) => handleInputChange("details", e.target.value)}
                   placeholder="Enter department name"
-                  className="h-11 bg-white/5 border-white/10 w-full"
+                  className="h-11 bg-foreground/5 border-foreground/10 w-full"
                 />
               </div>
 
@@ -402,7 +402,7 @@ export default function DepartmentPage() {
                     })
                   }
                 >
-                  <SelectTrigger className="h-11 bg-white/5 border-white/10 w-full">
+                  <SelectTrigger className="h-11 bg-foreground/5 border-foreground/10 w-full">
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -418,7 +418,7 @@ export default function DepartmentPage() {
                 </Select>
               </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10">
+              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/10">
                 {isLoading ? "Adding..." : "Add Department"}
               </Button>
             </form>
@@ -462,25 +462,25 @@ export default function DepartmentPage() {
                         {/* 📅 Bulk Shift Assignment Dialog */}
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white transition-all text-[10px] uppercase tracking-widest font-bold">
+                            <Button variant="outline" size="sm" className="bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white transition-all text-xs font-bold">
                               Assign Shift
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="bg-[#0d1117] border-white/10">
+                          <DialogContent className="bg-card border-foreground/10">
                             <DialogHeader>
-                              <DialogTitle className="text-white">Bulk Assign Shift: {dept.details}</DialogTitle>
+                              <DialogTitle className="text-foreground">Bulk Assign Shift: {dept.details}</DialogTitle>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
                               <p className="text-sm text-muted-foreground">
-                                Select a shift to apply to ALL employees currently in the <span className="text-white font-bold">{dept.details}</span> department.
+                                Select a shift to apply to ALL employees currently in the <span className="text-foreground font-bold">{dept.details}</span> department.
                               </p>
                               <Select onValueChange={setSelectedShiftId}>
-                                <SelectTrigger className="bg-white/5 border-white/10 text-white h-12">
+                                <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground h-12">
                                   <SelectValue placeholder="Choose a Shift" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#0d1117] border-white/10">
+                                <SelectContent>
                                   {availableShifts.filter(s => s.department === dept.department_id).map(shift => (
-                                    <SelectItem key={shift.shift_id} value={shift.shift_id.toString()} className="text-white focus:bg-white/10 focus:text-white">
+                                    <SelectItem key={shift.shift_id} value={shift.shift_id.toString()}>
                                       {shift.shift_name} ({shift.shift_start_time} - {shift.shift_end_time})
                                     </SelectItem>
                                   ))}
@@ -492,7 +492,7 @@ export default function DepartmentPage() {
                             </div>
                             <DialogFooter>
                               <DialogClose asChild>
-                                <Button variant="outline" className="text-white border-white/10 hover:bg-white/5">Cancel</Button>
+                                <Button variant="outline" className="text-foreground border-foreground/10 hover:bg-foreground/5">Cancel</Button>
                               </DialogClose>
                               <Button 
                                 onClick={() => handleBulkAssignShift(dept.department_id)} 

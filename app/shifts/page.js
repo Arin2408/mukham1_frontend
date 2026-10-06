@@ -280,9 +280,9 @@ export default function ShiftsPage() {
   return (
     <>
       <Sidebar />
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background">
         <div className="flex items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold">Shift Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight page-title">Shift Management</h1>
           <div className="ml-auto">
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
@@ -377,10 +377,10 @@ export default function ShiftsPage() {
         {shifts.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
             {/* Peak Hours Heatmap */}
-            <Card className="quantanex-card p-6 border-white/5 bg-[#11141b] lg:col-span-1">
+            <Card className="quantanex-card p-6 border-foreground/5 bg-card lg:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                <Users className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Peak Hours</h3>
+                <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-xs font-bold text-foreground/60">Peak Hours</h3>
               </div>
               <div className="space-y-1.5">
                 {(() => {
@@ -394,8 +394,8 @@ export default function ShiftsPage() {
                   const max = Math.max(...counts, 1);
                   return counts.filter((_, i) => i % 2 === 0).map((c, i) => (
                     <div key={i} className="flex items-center gap-2 group">
-                      <span className="text-[9px] text-white/30 w-8">{(i*2).toString().padStart(2, '0')}:00</span>
-                      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <span className="text-xs text-foreground/30 w-8">{(i*2).toString().padStart(2, '0')}:00</span>
+                      <div className="flex-1 h-1.5 bg-foreground/5 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500/50 transition-all duration-1000" style={{ width: `${(c/max)*100}%` }} />
                       </div>
                     </div>
@@ -405,15 +405,15 @@ export default function ShiftsPage() {
             </Card>
 
             {/* Timeline Visualizer */}
-            <Card className="quantanex-card p-6 border-white/5 bg-[#11141b] lg:col-span-3">
+            <Card className="quantanex-card p-6 border-foreground/5 bg-card lg:col-span-3">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" />
-                  <h3 className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Visual Timeline</h3>
+                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-bold text-foreground/60">Visual Timeline</h3>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500/30" /><span className="text-[8px] text-white/40 font-bold uppercase">Day</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500/30" /><span className="text-[8px] text-white/40 font-bold uppercase">Night</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500/30" /><span className="text-[8px] text-foreground/40 font-bold">Day</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-purple-500/30" /><span className="text-[8px] text-foreground/40 font-bold">Night</span></div>
                 </div>
               </div>
 
@@ -421,8 +421,8 @@ export default function ShiftsPage() {
                 {/* Time Grid */}
                 <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
                   {[0, 6, 12, 18, 24].map(h => (
-                    <div key={h} className="h-full border-r border-white/40 relative">
-                      <span className="absolute -top-6 -right-3 text-[9px] text-white font-medium">{h}:00</span>
+                    <div key={h} className="h-full border-r border-foreground/40 relative">
+                      <span className="absolute -top-6 -right-3 text-xs text-foreground font-medium">{h}:00</span>
                     </div>
                   ))}
                 </div>
@@ -442,16 +442,16 @@ export default function ShiftsPage() {
                         {isOver ? (
                           <>
                             <div className={`absolute h-full rounded-l border-y border-l ${color} flex items-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
-                              <span className="text-[10px] font-bold text-white truncate">{shift.shift_name}</span>
+                              <span className="text-xs font-bold text-foreground truncate">{shift.shift_name}</span>
                             </div>
                             <div className={`absolute h-full rounded-r border-y border-r ${color} flex items-center px-3`} style={{ left: '0%', width: `${end}%` }}>
-                              <span className="text-[10px] font-bold text-white truncate opacity-0 group-hover:opacity-100">{shift.shift_name}</span>
+                              <span className="text-xs font-bold text-foreground truncate opacity-0 group-hover:opacity-100">{shift.shift_name}</span>
                             </div>
                           </>
                         ) : (
                           <div className={`absolute h-full rounded border ${color} flex flex-col justify-center px-3`} style={{ left: `${start}%`, width: `${end - start}%` }}>
-                            <span className="text-[10px] font-bold text-white truncate">{shift.shift_name}</span>
-                            <span className="text-[8px] text-white/30 uppercase tracking-tighter">{dept}</span>
+                            <span className="text-xs font-bold text-foreground truncate">{shift.shift_name}</span>
+                            <span className="text-[8px] text-foreground/30 tracking-tight">{dept}</span>
                           </div>
                         )}
                       </div>
@@ -463,7 +463,7 @@ export default function ShiftsPage() {
           </div>
         )}
 
-        <Card className="quantanex-card border-white/5 overflow-hidden">
+        <Card className="quantanex-card border-foreground/5 overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
