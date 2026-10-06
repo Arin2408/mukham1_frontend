@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Building, Loader2, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+import { AuthShell } from "@/components/AuthShell"
 import { useToast } from "@/hooks/use-toast"
 import { AxiosPost } from "@/context/AuthContext"
 
@@ -81,8 +82,8 @@ function ResetPasswordForm() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md text-center">
+      <AuthShell>
+        <Card className="w-full max-w-md text-center rounded-2xl auth-gradient-border bg-card shadow-2xl shadow-blue-500/10">
           <CardHeader>
             <div className="flex items-center justify-center mb-4">
               <CheckCircle2 className="h-16 w-16 text-green-500" />
@@ -98,16 +99,18 @@ function ResetPasswordForm() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+    <AuthShell>
+      <Card className="w-full max-w-md rounded-2xl auth-gradient-border bg-card shadow-2xl shadow-blue-500/10">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-6">
-            <Building className="h-12 w-12 text-primary" />
+            <div className="w-14 h-14 brand-tile rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Building className="h-7 w-7 text-white" />
+            </div>
           </div>
           <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
           <CardDescription className="text-center">
@@ -157,7 +160,7 @@ function ResetPasswordForm() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthShell>
   )
 }
 

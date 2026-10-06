@@ -53,7 +53,7 @@ export function Header() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
               <Building2 className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">Mukham</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">Mukham</span>
           </Link>
         </div>
 
@@ -67,11 +67,11 @@ export function Header() {
                 className={`flex items-center gap-2 px-3 h-10 rounded-lg transition-all ${
                   pathname === item.href 
                     ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
                 }`}
               >
                 <item.icon className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">{item.name}</span>
+                <span className="text-xs font-bold">{item.name}</span>
               </Button>
             </Link>
           ))}
@@ -81,8 +81,8 @@ export function Header() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 pl-2 cursor-pointer group">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-white leading-none">{userName}</p>
-              <p className="text-[10px] text-muted-foreground font-medium mt-1 uppercase tracking-tighter">{userRole}</p>
+              <p className="text-xs font-bold text-foreground leading-none">{userName}</p>
+              <p className="text-xs text-muted-foreground font-medium mt-1 tracking-tight">{userRole}</p>
             </div>
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold group-hover:scale-105 transition-all">
               {userInitials}

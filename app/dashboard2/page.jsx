@@ -48,14 +48,14 @@ import {
 
 const tooltipStyle = {
   contentStyle: {
-    backgroundColor: '#11141b',
-    border: '1px solid rgba(255,255,255,0.1)',
+    backgroundColor: 'hsl(var(--popover))',
+    border: '1px solid hsl(var(--border))',
     borderRadius: '8px',
     padding: '8px',
     fontSize: '12px'
   },
-  itemStyle: { color: '#fff' },
-  cursor: { fill: 'rgba(255,255,255,0.05)' }
+  itemStyle: { color: 'hsl(var(--popover-foreground))' },
+  cursor: { fill: 'rgba(128,128,128,0.1)' }
 };
 
 // Employee data is fetched from the API inside the DashboardContent component
@@ -442,14 +442,14 @@ const [verificationLocation, setVerificationLocation] = useState(null);
   ) || [];
 
   if (!isMounted) {
-    return <div className="min-h-screen bg-[#0b0e14]" />;
+    return <div className="min-h-screen bg-background" />;
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white selection:bg-primary/30 flex">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 flex">
       <Sidebar />
       
-      <div className="flex-1 lg:ml-64 ml-0 p-4 lg:p-10 space-y-8 relative z-10 max-w-[1600px] mx-auto w-full">
+      <div className="flex-1 lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 ml-0 p-4 lg:p-10 space-y-8 relative z-10 max-w-[1600px] mx-auto w-full">
         {!isMounted ? (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center space-y-4">
@@ -461,13 +461,13 @@ const [verificationLocation, setVerificationLocation] = useState(null);
           <>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight text-white">Member Dashboard</h1>
+                <h1 className="text-2xl font-bold tracking-tight page-title">Member Dashboard</h1>
                 <p className="text-muted-foreground text-sm">Welcome back, {employeeData.name.split(' ')[0]}. Here is your status.</p>
               </div>
               <div className="flex items-center gap-4">
-                 <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
+                 <div className="flex items-center gap-3 bg-foreground/5 px-4 py-2 rounded-lg border border-foreground/10">
                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Session</span>
+                   <span className="text-xs font-bold text-muted-foreground">Active Session</span>
                  </div>
               </div>
             </div>
@@ -477,10 +477,10 @@ const [verificationLocation, setVerificationLocation] = useState(null);
                <Card className="quantanex-card p-6 flex flex-col justify-center items-center text-center relative overflow-hidden group">
                   <div className="absolute inset-0 sparkline-blue opacity-20" />
                   <div className="relative z-10">
-                    <h2 className="text-4xl font-black text-white tracking-tighter mb-1">
+                    <h2 className="text-4xl font-bold text-foreground tracking-tight mb-1">
                       {isMounted && currentTime ? formatTime(currentTime) : "--:--"}
                     </h2>
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                    <p className="text-xs font-bold text-primary">
                       {isMounted && currentTime ? currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : "---"}
                     </p>
                   </div>
@@ -497,8 +497,8 @@ const [verificationLocation, setVerificationLocation] = useState(null);
                         <stat.icon className={`h-5 w-5 text-${stat.color}-500`} />
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
-                        <h3 className="text-lg font-bold text-white truncate max-w-[150px]">{stat.value}</h3>
+                        <p className="text-xs font-bold text-muted-foreground mb-1">{stat.label}</p>
+                        <h3 className="text-lg font-bold text-foreground truncate max-w-[150px]">{stat.value}</h3>
                       </div>
                     </div>
                     <div className={`mt-4 h-1 w-full bg-${stat.color}-500/10 rounded-full overflow-hidden`}>
@@ -513,30 +513,30 @@ const [verificationLocation, setVerificationLocation] = useState(null);
               <Card className="quantanex-card p-8 lg:col-span-2">
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Shift Control</h3>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">Shift Control</h3>
                     <p className="text-xs text-muted-foreground">Manage your active work session</p>
                   </div>
                   {Object.keys(activeShifts).length > 0 && (
                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
                       <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-[10px] font-bold text-green-500">LIVE</span>
+                      <span className="text-xs font-bold text-green-500">LIVE</span>
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-6">
                   {Object.keys(activeShifts).length === 0 ? (
-                    <div className="flex flex-col sm:flex-row items-end gap-4 bg-white/[0.02] p-6 rounded-xl border border-white/5">
+                    <div className="flex flex-col sm:flex-row items-end gap-4 bg-foreground/[0.02] p-6 rounded-xl border border-foreground/5">
                       <div className="flex-1 w-full space-y-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Available Shift</label>
+                        <label className="text-xs font-bold text-muted-foreground ml-1">Available Shift</label>
                         <Select
                           value={selectedShift?.id}
                           onValueChange={(v) => setSelectedShift(employeeData.availableShifts.find(s => s.id === v))}
                         >
-                          <SelectTrigger className="w-full bg-white/5 border-white/10 h-12 text-white">
+                          <SelectTrigger className="w-full bg-foreground/5 border-foreground/10 h-12 text-foreground">
                             <SelectValue placeholder="Select shift to start..." />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#11141b] border-white/10 text-white">
+                          <SelectContent>
                             {availableShiftsForSelection.map((s) => (
                               <SelectItem key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</SelectItem>
                             ))}
@@ -546,7 +546,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
                       <Button
                         onClick={handleMarkAttendance}
                         disabled={!canStartShift(selectedShift) || isVerifying}
-                        className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
+                        className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/20"
                       >
                         {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MapPin className="mr-2 h-4 w-4" />}
                         Start Session
@@ -560,14 +560,14 @@ const [verificationLocation, setVerificationLocation] = useState(null);
                             <Timer className="h-6 w-6 text-green-500 animate-pulse" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-white uppercase tracking-tight">{info.shift.name}</p>
-                            <p className="text-xs text-muted-foreground">Started at {formatTime(info.startTime)} • Status: <span className="text-green-500 font-bold uppercase">{info.status.type}</span></p>
+                            <p className="text-sm font-bold text-foreground tracking-tight">{info.shift.name}</p>
+                            <p className="text-xs text-muted-foreground">Started at {formatTime(info.startTime)} • Status: <span className="text-green-500 font-bold">{info.status.type}</span></p>
                           </div>
                         </div>
                         <Button
                           variant="destructive"
                           onClick={() => handleEndShift(id)}
-                          className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-widest px-8 h-12 mt-4 sm:mt-0 shadow-lg shadow-red-900/20 border-none"
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-8 h-12 mt-4 sm:mt-0 shadow-lg shadow-red-900/20 border-none"
                         >
                           End Session
                         </Button>
@@ -579,25 +579,25 @@ const [verificationLocation, setVerificationLocation] = useState(null);
 
               {/* Recent Logs mini-list */}
               <Card className="quantanex-card p-0 flex flex-col h-full">
-                <div className="p-6 border-b border-white/5 bg-white/[0.02]">
-                  <h3 className="text-lg font-bold text-white">Recent Logs</h3>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mt-1">Activity Feed</p>
+                <div className="p-6 border-b border-foreground/5 bg-foreground/[0.02]">
+                  <h3 className="text-lg font-bold text-foreground">Recent Logs</h3>
+                  <p className="text-xs text-muted-foreground font-bold mt-1">Activity Feed</p>
                 </div>
-                <div className="flex-1 overflow-auto max-h-[400px] divide-y divide-white/5">
+                <div className="flex-1 overflow-auto max-h-[400px] divide-y divide-foreground/5">
                   {[...employeeData.attendanceHistory, ...completedShifts]
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .map((record, index) => (
-                      <div key={index} className="p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors group">
+                      <div key={index} className="p-4 flex items-center justify-between hover:bg-foreground/[0.01] transition-colors group">
                          <div className="flex items-center gap-3">
                            <div className={`w-1.5 h-1.5 rounded-full ${record.status.includes("Late") ? "bg-amber-500" : "bg-green-500"}`} />
                            <div>
-                             <p className="text-[10px] font-bold text-white uppercase group-hover:text-primary transition-colors">{record.shift}</p>
-                             <p className="text-[10px] text-muted-foreground">{record.date}</p>
+                             <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{record.shift}</p>
+                             <p className="text-xs text-muted-foreground">{record.date}</p>
                            </div>
                          </div>
                          <div className="text-right">
-                           <p className={`text-[10px] font-bold ${record.status.includes("Late") ? "text-amber-500" : "text-green-500"}`}>{record.status.toUpperCase()}</p>
-                           <p className="text-[10px] text-muted-foreground font-mono">{record.hours}H</p>
+                           <p className={`text-xs font-bold ${record.status.includes("Late") ? "text-amber-500" : "text-green-500"}`}>{record.status.toUpperCase()}</p>
+                           <p className="text-xs text-muted-foreground font-mono">{record.hours}H</p>
                          </div>
                       </div>
                     ))}
@@ -609,35 +609,35 @@ const [verificationLocation, setVerificationLocation] = useState(null);
             <Card className="quantanex-card p-8">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-xl font-bold text-white">Attendance Analytics</h3>
+                  <h3 className="text-xl font-bold text-foreground">Attendance Analytics</h3>
                   <p className="text-xs text-muted-foreground">Historical work hour performance</p>
                 </div>
                 <div className="text-right">
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase">Average</p>
-                   <p className="text-lg font-bold text-primary tracking-tighter">7.4 HRS</p>
+                   <p className="text-xs font-bold text-muted-foreground">Average</p>
+                   <p className="text-lg font-bold text-primary tracking-tight">7.4 HRS</p>
                 </div>
               </div>
               <div className="h-[350px] w-full flex items-center justify-center">
                 {[...employeeData.attendanceHistory, ...completedShifts].length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[...employeeData.attendanceHistory, ...completedShifts].slice(0, 10).reverse()}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.2)" />
                       <XAxis 
                         dataKey="date" 
-                        stroke="rgba(255,255,255,0.4)" 
+                        stroke="rgba(128,128,128,0.8)" 
                         fontSize={11} 
                         tickLine={false} 
                         axisLine={false} 
                         dy={10} 
                       />
                       <YAxis 
-                        stroke="rgba(255,255,255,0.4)" 
+                        stroke="rgba(128,128,128,0.8)" 
                         fontSize={11} 
                         tickLine={false} 
                         axisLine={false} 
                       />
                       <Tooltip {...tooltipStyle} />
-                      <Bar dataKey="hours" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
+                      <Bar dataKey="hours" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={40} isAnimationActive={false} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -651,7 +651,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
 
       {/* Verification Modal */}
       <Dialog open={isVerifying} onOpenChange={(o) => !o && setIsVerifying(false)}>
-        <DialogContent className="bg-[#11141b] border-white/10 text-white max-w-md rounded-2xl">
+        <DialogContent className="bg-card border-foreground/10 text-foreground max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center">Identity Verification</DialogTitle>
             <DialogDescription className="text-center text-muted-foreground">Command Center Security Protocol</DialogDescription>
@@ -669,17 +669,17 @@ const [verificationLocation, setVerificationLocation] = useState(null);
                     <MapPin className="h-16 w-16 text-primary animate-bounce mx-auto" />
                     <Loader2 className="h-20 w-20 text-primary/20 animate-spin absolute -top-2 -left-2" />
                   </div>
-                  <p className="text-sm font-bold uppercase tracking-widest">Checking Geofence...</p>
+                  <p className="text-sm font-bold">Checking Geofence...</p>
                 </div>
              )}
 
              {verificationStep === 'face' && (
                 <div className="space-y-6">
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-black aspect-video">
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-foreground/10 bg-card aspect-video">
                     <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 border-[30px] border-black/40 rounded-full scale-110 pointer-events-none" />
                   </div>
-                  <Button onClick={captureAndVerify} className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs">
+                  <Button onClick={captureAndVerify} className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold text-xs">
                     Verify Identity
                   </Button>
                 </div>

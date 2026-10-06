@@ -213,16 +213,16 @@ export default function DesignationPage() {
   return (
     <>
       <Sidebar />
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a] text-white">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background text-foreground">
         <div className="pt-10 flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Designation Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight page-title">Designation Management</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Main Content */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            <Card className="p-8 w-full border-white/5">
-              <h2 className="text-lg font-semibold mb-6 text-white">Add New Designation</h2>
+            <Card className="p-8 w-full border-foreground/5">
+              <h2 className="text-lg font-semibold mb-6 text-foreground">Add New Designation</h2>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Designation Name</label>
@@ -230,7 +230,7 @@ export default function DesignationPage() {
                     value={formData.details}
                     onChange={(e) => handleInputChange("details", e.target.value)}
                     placeholder="Enter designation name"
-                    className="h-11 bg-white/5 border-white/10 w-full"
+                    className="h-11 bg-foreground/5 border-foreground/10 w-full"
                     required
                   />
                 </div>
@@ -241,10 +241,10 @@ export default function DesignationPage() {
                     value={formData.department}
                     onValueChange={(value) => handleInputChange("department", value)}
                   >
-                    <SelectTrigger className="h-11 bg-white/5 border-white/10 w-full text-white">
+                    <SelectTrigger className="h-11 bg-foreground/5 border-foreground/10 w-full text-foreground">
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0f1117] border-white/10 text-white">
+                    <SelectContent>
                       {departments.map((dept) => (
                         <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
                           {dept.details}
@@ -254,18 +254,18 @@ export default function DesignationPage() {
                   </Select>
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10 transition-all active:scale-95">
+                <Button type="submit" disabled={isLoading} className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/10 transition-all active:scale-95">
                   {isLoading ? "Adding..." : "Add Designation"}
                 </Button>
               </form>
             </Card>
 
-            <Card className="p-6 w-full border-white/5">
-              <h2 className="text-lg font-semibold mb-6 text-white">Designations List</h2>
+            <Card className="p-6 w-full border-foreground/5">
+              <h2 className="text-lg font-semibold mb-6 text-foreground">Designations List</h2>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent text-[10px] uppercase tracking-widest font-bold">
+                    <TableRow className="border-foreground/5 hover:bg-transparent text-xs font-bold">
                       <TableHead className="text-muted-foreground">Designation</TableHead>
                       <TableHead className="text-muted-foreground">Department</TableHead>
                       <TableHead className="text-muted-foreground">Members</TableHead>
@@ -285,18 +285,18 @@ export default function DesignationPage() {
                         return (
                           <TableRow
                             key={designation.designation_id}
-                            className={`border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer ${
-                              selectedDesignation?.designation_id === designation.designation_id ? 'bg-white/[0.05]' : ''
+                            className={`border-foreground/5 hover:bg-foreground/[0.02] transition-colors cursor-pointer ${
+                              selectedDesignation?.designation_id === designation.designation_id ? 'bg-foreground/[0.05]' : ''
                             }`}
                             onClick={() => setSelectedDesignation(designation)}
                           >
-                            <TableCell className="font-medium text-white/90">{designation.details}</TableCell>
+                            <TableCell className="font-medium text-foreground/90">{designation.details}</TableCell>
                             <TableCell>
                               <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">
                                 {getDepartmentName(designation.department)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-xs font-mono text-white/60">
+                            <TableCell className="text-xs font-mono text-foreground/60">
                               {memberCount} Employees
                             </TableCell>
                             <TableCell className="text-right">
@@ -306,13 +306,13 @@ export default function DesignationPage() {
                                     <Button
                                       variant="outline"
                                       size="icon"
-                                      className="h-8 w-8 bg-transparent border-white/10 hover:bg-white/10 text-white"
+                                      className="h-8 w-8 bg-transparent border-foreground/10 hover:bg-foreground/10 text-foreground"
                                       onClick={() => setEditingDesignation({ ...designation })}
                                     >
                                       <Pencil className="h-4 w-4" />
                                     </Button>
                                   </DialogTrigger>
-                                <DialogContent className="bg-[#0f1117] border-white/10 text-white">
+                                <DialogContent className="bg-card border-foreground/10 text-foreground">
                                   <DialogHeader>
                                     <DialogTitle>Edit Designation</DialogTitle>
                                   </DialogHeader>
@@ -322,7 +322,7 @@ export default function DesignationPage() {
                                       <Input
                                         value={editingDesignation?.details}
                                         onChange={(e) => handleInputChange("details", e.target.value)}
-                                        className="bg-white/5 border-white/10 text-white"
+                                        className="bg-foreground/5 border-foreground/10 text-foreground"
                                         required
                                       />
                                     </div>
@@ -332,10 +332,10 @@ export default function DesignationPage() {
                                         value={editingDesignation?.department.toString()}
                                         onValueChange={(value) => handleInputChange("department", value)}
                                       >
-                                        <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                                        <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground">
                                           <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-[#0f1117] border-white/10 text-white">
+                                        <SelectContent>
                                           {departments.map((dept) => (
                                             <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
                                               {dept.details}
@@ -358,19 +358,19 @@ export default function DesignationPage() {
 
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent border-white/10 hover:bg-destructive/10 text-white">
+                                  <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent border-foreground/10 hover:bg-destructive/10 text-foreground">
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="bg-[#0f1117] border-white/10 text-white">
+                                <AlertDialogContent className="bg-card border-foreground/10 text-foreground">
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Designation</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-white/60">
+                                    <AlertDialogDescription className="text-foreground/60">
                                       Are you sure you want to delete this designation?
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-transparent border-white/10 text-white">Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel className="bg-transparent border-foreground/10 text-foreground">Cancel</AlertDialogCancel>
                                     <AlertDialogAction
                                       onClick={() => handleDelete(designation.designation_id)}
                                       className="bg-destructive text-white hover:bg-destructive/90"
@@ -399,38 +399,38 @@ export default function DesignationPage() {
                 <div className="bg-primary/10 p-6 border-b border-primary/20">
                   <div className="flex items-center gap-3 mb-2 text-primary">
                     <Briefcase className="h-5 w-5" />
-                    <span className="text-xs font-bold uppercase tracking-[0.2em]">Designation Detail</span>
+                    <span className="text-xs font-bold">Designation Detail</span>
                   </div>
-                  <h3 className="text-2xl font-bold text-white">{selectedDesignation.details}</h3>
+                  <h3 className="text-2xl font-bold text-foreground">{selectedDesignation.details}</h3>
                   <p className="text-sm text-primary/80 font-medium">{getDepartmentName(selectedDesignation.department)}</p>
                 </div>
                 
                 <div className="p-6 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-foreground/5 border border-foreground/10">
                       <Users className="h-4 w-4 text-primary mb-2" />
-                      <div className="text-2xl font-mono font-bold text-white">
+                      <div className="text-2xl font-mono font-bold text-foreground">
                         {employees.filter(emp => String(emp.designation) === String(selectedDesignation.designation_id)).length}
                       </div>
-                      <div className="text-[10px] text-white/40 uppercase tracking-wider">Employees</div>
+                      <div className="text-xs text-foreground/40">Employees</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-4 rounded-xl bg-foreground/5 border border-foreground/10">
                       <Info className="h-4 w-4 text-primary mb-2" />
-                      <div className="text-2xl font-mono font-bold text-white">Active</div>
-                      <div className="text-[10px] text-white/40 uppercase tracking-wider">Status</div>
+                      <div className="text-2xl font-mono font-bold text-foreground">Active</div>
+                      <div className="text-xs text-foreground/40">Status</div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Quick Actions</h4>
+                    <h4 className="text-xs font-bold text-foreground/40">Quick Actions</h4>
                     <div className="flex flex-col gap-2">
                       <Button
-                        className="w-full justify-start bg-white/5 border-white/10 hover:bg-white/10 text-xs text-white"
+                        className="w-full justify-start bg-foreground/5 border-foreground/10 hover:bg-foreground/10 text-xs text-foreground"
                         onClick={() => router.push(`/employees?designation=${selectedDesignation.designation_id}`)}
                       >
                         <Users className="mr-2 h-4 w-4" /> View Employees
                       </Button>
-                      <Button variant="ghost" className="w-full justify-start hover:bg-white/5 text-xs text-white/60 hover:text-white" onClick={() => setSelectedDesignation(null)}>
+                      <Button variant="ghost" className="w-full justify-start hover:bg-foreground/5 text-xs text-foreground/60 hover:text-foreground" onClick={() => setSelectedDesignation(null)}>
                         Clear Selection
                       </Button>
                     </div>
@@ -438,13 +438,13 @@ export default function DesignationPage() {
                 </div>
               </Card>
             ) : (
-              <Card className="quantanex-card p-10 border-white/5 bg-white/[0.01] flex flex-col items-center justify-center text-center gap-4 border-dashed">
-                <div className="p-4 rounded-full bg-white/5 border border-white/10">
-                  <Info className="h-8 w-8 text-white/20" />
+              <Card className="quantanex-card p-10 border-foreground/5 bg-foreground/[0.01] flex flex-col items-center justify-center text-center gap-4 border-dashed">
+                <div className="p-4 rounded-full bg-foreground/5 border border-foreground/10">
+                  <Info className="h-8 w-8 text-foreground/20" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">No Selection</h3>
-                  <p className="text-xs text-white/40 max-w-[200px]">Click on a designation in the list to view advanced insights.</p>
+                  <h3 className="text-sm font-bold text-foreground/60">No Selection</h3>
+                  <p className="text-xs text-foreground/40 max-w-[200px]">Click on a designation in the list to view advanced insights.</p>
                 </div>
               </Card>
             )}

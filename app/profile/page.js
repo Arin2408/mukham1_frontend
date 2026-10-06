@@ -250,68 +250,68 @@ useEffect(() => {
         ${isEmbed ? 'body { overflow: hidden; }' : ''}
       `}</style>
       {!isEmbed && <Sidebar />}
-      <div className="flex-1 ml-64 relative z-10">
+      <div className="flex-1 lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 relative z-10">
         <div className="p-6 lg:p-10">
         <div className="flex items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-white">Organisation Profile</h1>
+          <h1 className="text-2xl font-bold tracking-tight page-title">Organisation Profile</h1>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="quantanex-card border-white/5 col-span-1">
+          <Card className="quantanex-card border-foreground/5 col-span-1">
             <CardHeader>
-              <CardTitle className="text-white">Information</CardTitle>
+              <CardTitle className="text-foreground">Information</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
-              <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-primary/20 mb-6">
+              <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-bold text-foreground shadow-2xl shadow-primary/20 mb-6">
                 {displayedOrganisation.name.charAt(0)}
               </div>
-              <h2 className="text-xl font-bold text-white mb-1">{displayedOrganisation.name}</h2>
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-6">{displayedOrganisation.email}</p>
-              <Button variant="outline" className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-bold uppercase tracking-widest text-[10px] h-11" onClick={logoutUser}>
+              <h2 className="text-xl font-bold text-foreground mb-1">{displayedOrganisation.name}</h2>
+              <p className="text-xs text-muted-foreground font-bold mb-6">{displayedOrganisation.email}</p>
+              <Button variant="outline" className="w-full border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-bold text-xs h-11" onClick={logoutUser}>
                 Terminate Session
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="quantanex-card border-white/5 col-span-1 md:col-span-2">
+          <Card className="quantanex-card border-foreground/5 col-span-1 md:col-span-2">
             <CardHeader>
-              <CardTitle className="text-white uppercase tracking-tight text-lg">Edit Organisation</CardTitle>
+              <CardTitle className="text-foreground tracking-tight text-lg">Edit Organisation</CardTitle>
             </CardHeader>
             <CardContent>
               <form className="space-y-6" onSubmit={handleSaveChanges}>
                 <div className="flex flex-wrap gap-6">
                   <div className="space-y-2 w-80">
-                    <Label htmlFor="name" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Org Name</Label>
+                    <Label htmlFor="name" className="text-xs font-bold text-muted-foreground ml-1">Org Name</Label>
                     <Input
                       id="name"
-                      className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
+                      className="bg-foreground/5 border-foreground/10 text-foreground h-11 focus:border-primary/50 transition-all"
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
                     />
                   </div>
                   <div className="space-y-2 w-80">
-                    <Label htmlFor="email" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Support Email</Label>
+                    <Label htmlFor="email" className="text-xs font-bold text-muted-foreground ml-1">Support Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
+                      className="bg-foreground/5 border-foreground/10 text-foreground h-11 focus:border-primary/50 transition-all"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="details" className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Org Details</Label>
+                  <Label htmlFor="details" className="text-xs font-bold text-muted-foreground ml-1">Org Details</Label>
                   <Input
                     id="details"
-                    className="bg-white/5 border-white/10 text-white h-11 focus:border-primary/50 transition-all"
+                    className="bg-foreground/5 border-foreground/10 text-foreground h-11 focus:border-primary/50 transition-all"
                     value={formData.details}
                     onChange={(e) => handleInputChange("details", e.target.value)}
                   />
                 </div>
                 <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={isLoading || !hasChanges} className={`px-10 h-11 font-bold uppercase tracking-widest text-[10px] shadow-lg transition-all ${
-                    hasChanges ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" : "bg-white/5 text-muted-foreground"
+                  <Button type="submit" disabled={isLoading || !hasChanges} className={`px-10 h-11 font-bold text-xs shadow-lg transition-all ${
+                    hasChanges ? "bg-primary hover:bg-primary/90 text-white shadow-primary/20" : "bg-foreground/5 text-muted-foreground"
                   }`}>
                     {isLoading ? "Synchronizing..." : hasChanges ? "Save Changes" : "No Changes Detected"}
                   </Button>

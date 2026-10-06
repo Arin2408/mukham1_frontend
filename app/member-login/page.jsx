@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AuthShell } from "@/components/AuthShell";
 import { useRouter } from "next/navigation";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { FaceLivenessDetectorCore } from "@aws-amplify/ui-react-liveness";
@@ -256,25 +257,21 @@ export default function MemberLoginPage() {
   // UI
   // =========================================================
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#02040a] px-4 relative overflow-hidden">
-      {/* BACKGROUND */}
-      <div className="absolute inset-0 aurora-flow opacity-20 pointer-events-none" />
-      <div className="absolute inset-0 cyber-grid opacity-10 pointer-events-none" />
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-slow-pulse" />
+    <AuthShell>
 
       {/* CARD */}
-      <Card className="w-full max-w-md quantanex-card relative z-10 overflow-hidden border-white/5 bg-white/[0.02] backdrop-blur-xl">
+      <Card className="w-full max-w-md relative z-10 overflow-hidden rounded-2xl auth-gradient-border bg-card shadow-2xl shadow-blue-500/10">
         {/* HEADER */}
         <CardHeader className="space-y-2 pb-8 pt-10 text-center">
-          <div className="mx-auto w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/10">
-            <Smartphone className="text-primary w-8 h-8" />
+          <div className="mx-auto w-16 h-16 brand-tile rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
+            <Smartphone className="text-white w-8 h-8" />
           </div>
 
-          <CardTitle className="text-3xl font-bold tracking-tighter text-white uppercase">
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">
             Member Portal
           </CardTitle>
 
-          <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground opacity-70">
+          <CardDescription className="text-xs font-bold text-muted-foreground opacity-70">
             {step === 1 ? "Authorized Personnel Only" : "Biometric Protocol"}
           </CardDescription>
         </CardHeader>
@@ -283,7 +280,7 @@ export default function MemberLoginPage() {
         <CardContent className="space-y-6 px-8 pb-12">
           {/* ERROR MESSAGE */}
           {errorMsg && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded-lg text-center">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold rounded-lg text-center">
               {errorMsg}
             </div>
           )}
@@ -297,7 +294,7 @@ export default function MemberLoginPage() {
                   <div className="flex items-center justify-between mb-1">
                     <Label
                       htmlFor="mobile"
-                      className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1"
+                      className="text-xs font-bold text-muted-foreground ml-1"
                     >
                       Mobile Number
                     </Label>
@@ -308,7 +305,7 @@ export default function MemberLoginPage() {
                     id="mobile"
                     type="text"
                     placeholder="10-digit number"
-                    className="h-12 bg-white/5 border-white/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground/30"
+                    className="h-12 bg-foreground/5 border-foreground/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground/30"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
                     required
@@ -320,7 +317,7 @@ export default function MemberLoginPage() {
                   <div className="flex items-center justify-between mb-1">
                     <Label
                       htmlFor="password"
-                      className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1"
+                      className="text-xs font-bold text-muted-foreground ml-1"
                     >
                       Member Password
                     </Label>
@@ -331,7 +328,7 @@ export default function MemberLoginPage() {
                     id="password"
                     type="password"
                     placeholder="Enter password"
-                    className="h-12 bg-white/5 border-white/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-white placeholder:text-muted-foreground/30"
+                    className="h-12 bg-foreground/5 border-foreground/10 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground/30"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -342,7 +339,7 @@ export default function MemberLoginPage() {
               {/* LOGIN BUTTON */}
               <Button
                 type="submit"
-                className="w-full h-12 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 transition-all"
+                className="w-full h-12 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/20 transition-all"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -362,12 +359,12 @@ export default function MemberLoginPage() {
             /* STEP 2 - FACE LIVENESS */
             <div className="space-y-6">
               {/* USER INFO */}
-              <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+              <div className="p-4 bg-foreground/5 rounded-xl border border-foreground/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                  <p className="text-[8px] font-bold text-muted-foreground">
                     Authenticated
                   </p>
-                  <p className="text-sm font-bold text-white font-mono tracking-widest">
+                  <p className="text-sm font-bold text-foreground font-mono">
                     {mobileNumber}
                   </p>
                 </div>
@@ -376,7 +373,7 @@ export default function MemberLoginPage() {
                   variant="ghost"
                   size="sm"
                   onClick={goBackToCredentials}
-                  className="h-8 text-[10px] font-bold uppercase text-primary hover:text-primary/80 hover:bg-white/5"
+                  className="h-8 text-xs font-bold text-primary hover:text-primary/80 hover:bg-foreground/5"
                 >
                   Change
                 </Button>
@@ -384,12 +381,12 @@ export default function MemberLoginPage() {
 
               {/* TITLE */}
               <div className="text-center space-y-2">
-                <h3 className="text-sm font-bold text-white uppercase tracking-widest">
+                <h3 className="text-sm font-bold text-foreground">
                   {isFaceRegistered
                     ? "Biometric Verification"
                     : "Secure Enrollment"}
                 </h3>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Complete the AWS Face Liveness check.
                 </p>
               </div>
@@ -414,7 +411,7 @@ export default function MemberLoginPage() {
 
               {/* AWS FACE LIVENESS */}
               {livenessSessionId && (
-                <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/40">
+                <div className="rounded-2xl overflow-hidden border border-foreground/10 bg-black/40">
                   <FaceLivenessDetectorCore
                     sessionId={livenessSessionId}
                     region={livenessRegion}
@@ -438,7 +435,7 @@ export default function MemberLoginPage() {
               {/* SESSION STATUS */}
               {livenessSessionId && (
                 <div className="text-center">
-                  <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
+                  <p className="text-xs text-muted-foreground">
                     AWS Face Liveness Active
                   </p>
                 </div>
@@ -447,7 +444,7 @@ export default function MemberLoginPage() {
               {/* CANCEL */}
               <Button
                 variant="ghost"
-                className="w-full text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em] hover:text-white"
+                className="w-full text-muted-foreground text-xs font-bold hover:text-foreground"
                 onClick={goBackToCredentials}
                 disabled={isLoading}
               >
@@ -457,8 +454,8 @@ export default function MemberLoginPage() {
           )}
 
           {/* FOOTER LINK */}
-          <div className="mt-8 pt-6 border-t border-white/5 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          <div className="mt-8 pt-6 border-t border-foreground/5 text-center">
+            <p className="text-xs text-muted-foreground">
               Admin Personnel?{" "}
               <Link
                 href="/"
@@ -470,13 +467,6 @@ export default function MemberLoginPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* FOOTER */}
-      <div className="absolute bottom-8 text-center w-full">
-        <p className="text-[10px] text-muted-foreground/40 font-bold uppercase tracking-[0.3em]">
-          Mukham Security Systems &copy; {new Date().getFullYear()}
-        </p>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

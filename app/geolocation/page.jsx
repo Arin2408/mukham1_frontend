@@ -580,12 +580,12 @@ export default function MapPage() {
     <>
       <Sidebar />
 
-      <div className="ml-64 p-6 lg:p-10 space-y-8 min-h-screen bg-[#02040a]">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background">
 
         {/* PAGE HEADER */}
 
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-2xl font-bold tracking-tight page-title">
             Location Selection
           </h1>
         </div>
@@ -613,7 +613,7 @@ export default function MapPage() {
               <Button
                 onClick={toggleMapStyle}
                 variant="outline"
-                className="bg-white/5 border-white/10 hover:bg-primary hover:text-white transition-all gap-2"
+                className="bg-foreground/5 border-foreground/10 hover:bg-primary hover:text-white transition-all gap-2"
               >
 
                 <div
@@ -636,18 +636,18 @@ export default function MapPage() {
 
               <div
                 id="map"
-                className="h-[600px] border-white/10 rounded-xl overflow-hidden shadow-2xl"
+                className="h-[600px] border-foreground/10 rounded-xl overflow-hidden shadow-2xl"
               />
 
               {/* Instructions */}
 
-              <div className="absolute top-4 left-4 z-[1000] p-3 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 left-4 z-[1000] p-3 bg-black/60 backdrop-blur-md rounded-lg border border-foreground/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
 
-                <p className="text-[10px] uppercase tracking-widest font-bold text-white/70">
+                <p className="text-xs font-bold text-foreground/70">
                   Protocol
                 </p>
 
-                <p className="text-xs text-white">
+                <p className="text-xs text-foreground">
                   Click anywhere on the map to set coordinates
                 </p>
 
@@ -671,7 +671,7 @@ export default function MapPage() {
                   Saved Locations
                 </h2>
 
-                <p className="text-sm text-white/50 mt-1">
+                <p className="text-sm text-foreground/50 mt-1">
                   Locations configured for this organization
                 </p>
 
@@ -688,13 +688,13 @@ export default function MapPage() {
 
             {isLocationsLoading ? (
 
-              <div className="py-8 text-center text-white/50">
+              <div className="py-8 text-center text-foreground/50">
                 Loading saved locations...
               </div>
 
             ) : savedLocations.length === 0 ? (
 
-              <div className="py-8 text-center text-white/50">
+              <div className="py-8 text-center text-foreground/50">
                 No locations saved yet.
               </div>
 
@@ -707,7 +707,7 @@ export default function MapPage() {
 
                     <div
                       key={location.location_id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30 transition-all"
+                      className="flex items-center justify-between p-4 rounded-lg bg-foreground/5 border border-foreground/10 hover:border-primary/30 transition-all"
                     >
 
                       <div className="flex items-center gap-4">
@@ -720,11 +720,11 @@ export default function MapPage() {
 
                         <div>
 
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-foreground">
                             {location.location_name}
                           </p>
 
-                          <p className="text-xs text-white/50 mt-1">
+                          <p className="text-xs text-foreground/50 mt-1">
 
                             Lat:{" "}
                             {location.latitude}
@@ -755,7 +755,7 @@ export default function MapPage() {
                             location.location_id
                           )
                         }
-                        className="text-white/50 hover:text-red-400 hover:bg-red-500/10"
+                        className="text-foreground/50 hover:text-red-400 hover:bg-red-500/10"
                       >
 
                         <Trash2
@@ -824,7 +824,7 @@ export default function MapPage() {
                           })
                         )
                       }
-                      className="h-11 bg-white/5 border-white/10 w-full"
+                      className="h-11 bg-foreground/5 border-foreground/10 w-full"
                       placeholder="Search address or enter name..."
                       onKeyDown={(e) => {
                         if (
@@ -841,7 +841,7 @@ export default function MapPage() {
                       type="button"
                       onClick={searchLocation}
                       disabled={isSearching}
-                      className="h-11 px-4 bg-white/5 border-white/10 hover:bg-primary transition-all"
+                      className="h-11 px-4 bg-foreground/5 border-foreground/10 hover:bg-primary transition-all"
                     >
 
                       <Search
@@ -872,7 +872,7 @@ export default function MapPage() {
                   <Input
                     id="organization"
                     placeholder="Organization"
-                    className="h-11 bg-white/5 border-white/10 w-full"
+                    className="h-11 bg-foreground/5 border-foreground/10 w-full"
                     value={
                       locationData.org.name
                     }
@@ -895,7 +895,7 @@ export default function MapPage() {
                   <Input
                     id="latitude"
                     placeholder="Latitude"
-                    className="h-11 bg-white/5 border-white/10 w-full"
+                    className="h-11 bg-foreground/5 border-foreground/10 w-full"
                     value={
                       locationData.latitude
                     }
@@ -927,7 +927,7 @@ export default function MapPage() {
                   <Input
                     id="longitude"
                     placeholder="Longitude"
-                    className="h-11 bg-white/5 border-white/10 w-full"
+                    className="h-11 bg-foreground/5 border-foreground/10 w-full"
                     value={
                       locationData.longitude
                     }
@@ -954,7 +954,7 @@ export default function MapPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="px-12 h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/10 transition-all active:scale-95"
+                  className="px-12 h-11 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-lg shadow-primary/10 transition-all active:scale-95"
                 >
 
                   <Save className="mr-2 h-4 w-4" />
