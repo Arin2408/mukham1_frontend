@@ -737,7 +737,7 @@ export default function MapPage() {
 
               {/* Instructions */}
 
-              <div className="absolute top-4 left-4 z-[1000] p-3 bg-black/60 backdrop-blur-md rounded-lg border border-foreground/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 left-4 z-[1000] p-3 bg-background/80 backdrop-blur-md rounded-lg border border-foreground/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
 
                 <p className="text-xs font-bold text-foreground/70">
                   Protocol
@@ -838,7 +838,7 @@ export default function MapPage() {
 
                             <label
                               htmlFor={`radius-${location.location_id}`}
-                              className="text-xs text-white/50"
+                              className="text-xs text-muted-foreground"
                             >
                               Check-in radius (m)
                             </label>
@@ -848,7 +848,7 @@ export default function MapPage() {
                               type="number"
                               min={MIN_RADIUS_METERS}
                               max={MAX_RADIUS_METERS}
-                              className="h-8 w-24 bg-white/5 border-white/10 text-xs"
+                              className="h-8 w-24 bg-foreground/5 border-foreground/10 text-xs"
                               value={
                                 radiusEdits[location.location_id] ??
                                 String(
@@ -1112,7 +1112,7 @@ export default function MapPage() {
                     min={MIN_RADIUS_METERS}
                     max={MAX_RADIUS_METERS}
                     placeholder={String(DEFAULT_GEOFENCE_RADIUS_METERS)}
-                    className="h-11 bg-white/5 border-white/10 w-full"
+                    className="h-11 bg-foreground/5 border-foreground/10 w-full"
                     value={
                       locationData.radius_meters
                     }
@@ -1128,7 +1128,7 @@ export default function MapPage() {
                     required
                   />
 
-                  <p className="text-xs text-white/50">
+                  <p className="text-xs text-muted-foreground">
                     Employees must be within this distance of the office to check in ({MIN_RADIUS_METERS} to {MAX_RADIUS_METERS}m).
                   </p>
 
