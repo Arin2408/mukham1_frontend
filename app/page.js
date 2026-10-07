@@ -63,7 +63,7 @@ export default function Home() {
             Face + location attendance
           </div>
 
-          <h1 className="!mt-6 text-8xl md:text-9xl lg:text-[12rem] font-bold tracking-tight leading-none text-shine">
+          <h1 className="!mt-6 text-6xl sm:text-8xl md:text-9xl lg:text-[12rem] font-bold tracking-tight leading-none text-shine">
             MUKHAM
           </h1>
 

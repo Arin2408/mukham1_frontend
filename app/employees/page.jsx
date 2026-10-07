@@ -488,8 +488,8 @@ export default function EmployeePage() {
   return (
     <>
       <Sidebar />
-      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-6 lg:p-10 space-y-8 min-h-screen bg-background">
-        <div className="flex justify-between items-center">
+      <div className="lg:ml-[var(--sidebar-w)] transition-[margin] duration-300 p-4 sm:p-6 lg:p-10 space-y-8 min-h-screen bg-background">
+        <div className="flex flex-wrap justify-between items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight page-title">Employee Management</h1>
             {designationFilter && (
@@ -507,7 +507,7 @@ export default function EmployeePage() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Select value={exportFormat} onValueChange={setExportFormat}>
                 <SelectTrigger className="w-[120px]">
@@ -707,16 +707,16 @@ export default function EmployeePage() {
             </form>
           </Card>
 
-          <Card className="quantanex-card p-6 col-span-2 border-foreground/5">
-            <div className="flex justify-between items-center mb-4">
+          <Card className="quantanex-card p-6 lg:col-span-2 min-w-0 border-foreground/5">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
               <h2 className="text-lg font-semibold">All Employees</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search employees..."
-                  className="w-64"
+                  className="w-full sm:w-64"
                 />
               </div>
             </div>

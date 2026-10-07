@@ -60,6 +60,13 @@ export function Sidebar() {
     document.documentElement.style.setProperty("--sidebar-w", width);
   }, [isCollapsed, isEmbedded]);
 
+  // Leave room for the mobile top bar on pages that use the sidebar
+  useEffect(() => {
+    if (isEmbedded) return;
+    document.body.classList.add("with-app-sidebar");
+    return () => document.body.classList.remove("with-app-sidebar");
+  }, [isEmbedded]);
+
   const toggleCollapsed = () => {
     setIsCollapsed((prev) => {
       try {
@@ -101,25 +108,42 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-[60] lg:hidden bg-sidebar border border-sidebar-border text-sidebar-foreground hover:bg-foreground/10"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+      {/* Mobile top bar */}
+      <header className="lg:hidden fixed top-0 inset-x-0 z-[60] h-14 flex items-center justify-between gap-3 px-3 bg-background/85 backdrop-blur-md border-b border-border">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open menu"
+          className="h-10 w-10 text-foreground hover:bg-foreground/10"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Link href={isMember ? "/member" : "/dashboard"} className="flex items-center gap-2">
+          <div className="w-8 h-8 brand-tile rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
+            <ScanFace className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-lg font-bold text-blue-500">Mukham</span>
+        </Link>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          className="h-10 w-10 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors"
+        >
+          {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        </button>
+      </header>
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[65] lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
-      <div className={`fixed top-0 left-0 bottom-0 bg-sidebar border-r border-sidebar-border z-50 flex flex-col text-sidebar-foreground transition-[width,transform] duration-300 lg:translate-x-0 ${
+      <div className={`fixed top-0 left-0 bottom-0 bg-sidebar border-r border-sidebar-border z-[70] lg:z-50 flex flex-col text-sidebar-foreground transition-[width,transform] duration-300 lg:translate-x-0 ${
         collapsed ? "w-56 lg:w-20" : "w-56"
       } ${
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"

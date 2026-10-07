@@ -91,6 +91,13 @@
   * {
     @apply border-border;
   }
+
+  /* Pages with the app sidebar get room for the mobile top bar */
+  @media (max-width: 1023px) {
+    body.with-app-sidebar {
+      padding-top: 3.5rem;
+    }
+  }
   body {
     @apply bg-background text-foreground antialiased selection:bg-blue-500/30;
     min-height: 100vh;

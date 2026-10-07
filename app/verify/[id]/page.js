@@ -88,6 +88,11 @@ export default function VerificationPage() {
                 <img 
                   src={employee.photo ? `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}${employee.photo}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.first_name}`} 
                   alt={employee.first_name}
+                  onError={(e) => {
+                    // Photo file missing on server: fall back to placeholder
+                    const placeholder = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(employee.first_name)}`;
+                    if (e.currentTarget.src !== placeholder) e.currentTarget.src = placeholder;
+                  }}
                   className="w-full h-full object-cover"
                 />
               </div>
