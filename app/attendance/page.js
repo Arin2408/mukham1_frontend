@@ -311,23 +311,23 @@ export default function AttendancePage() {
                               <div className="my-3 ml-10 mr-4 rounded-lg border border-border border-l-2 border-l-primary bg-card overflow-hidden">
                                 <Table>
                                   <TableHeader>
-<<<<<<< HEAD
-                                    <TableRow className="border-white/5 hover:bg-transparent">
+
+                                    <TableRow className="border-foreground/5 hover:bg-transparent">
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Date</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">In</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Out</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Work</TableHead>
                                       <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Status</TableHead>
-                                      <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground">Flags</TableHead>
-=======
-                                    <TableRow className="border-foreground/5 hover:bg-transparent">
+                                      <TableHead className="text-[9px] uppercase tracking-tighter text-muted-foreground"></TableHead>
+                                    </TableRow>
+                                    {/* <TableRow className="border-foreground/5 hover:bg-transparent">
                                       <TableHead className="text-xs tracking-tight text-muted-foreground">Date</TableHead>
                                       <TableHead className="text-xs tracking-tight text-muted-foreground">In</TableHead>
                                       <TableHead className="text-xs tracking-tight text-muted-foreground">Out</TableHead>
                                       <TableHead className="text-xs tracking-tight text-muted-foreground">Work</TableHead>
                                       <TableHead className="text-xs tracking-tight text-muted-foreground">Status</TableHead>
->>>>>>> 662eb9d28a0a58fb58b4b3f502dc698a7b3a7e3d
-                                    </TableRow>
+
+                                    </TableRow> */}
                                   </TableHeader>
                                   <TableBody>
                                     {employee.logs.map((log) => (
