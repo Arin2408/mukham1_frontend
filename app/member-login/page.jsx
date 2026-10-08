@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
 import Link from "next/link";
 import { AuthShell } from "@/components/AuthShell";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,10 @@ import {
 
 import "@aws-amplify/ui-react/styles.css";
 import "@/lib/amplify-config";
+
+const FastAPI = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_FASTAPI_URL,
+});
 
 export default function MemberLoginPage() {
   // =========================================================
@@ -106,7 +111,9 @@ export default function MemberLoginPage() {
       });
       console.log("AWS CREDENTIALS REGION:", session.credentials?.expiration);
 
-      const { data } = await Axios.post("face/liveness/create/");
+      const { data } = await FastAPI.post(
+        "face/liveness/create"
+      );
 
       console.log("AWS Liveness Session Created:", data.session_id);
 
@@ -117,7 +124,7 @@ export default function MemberLoginPage() {
 
       setErrorMsg(
         error.response?.data?.error ||
-          "Unable to start face liveness verification."
+        "Unable to start face liveness verification."
       );
     } finally {
       setIsLoading(false);
@@ -146,7 +153,7 @@ export default function MemberLoginPage() {
       console.log(`Face Liveness Mode: ${mode}`);
 
       // Send AWS Liveness result to backend
-      const { data } = await Axios.post("face/liveness/result/", {
+      const { data } = await FastAPI.post("face/liveness/result/", {
         session_id: livenessSessionId,
         mobile_number: cleanMobile,
         mode: mode,
@@ -161,8 +168,8 @@ export default function MemberLoginPage() {
         if (data.status !== "SUCCEEDED" || !data.registered) {
           setErrorMsg(
             data.message ||
-              data.error ||
-              "Face registration failed. Please try again."
+            data.error ||
+            "Face registration failed. Please try again."
           );
           setLivenessSessionId(null);
           return;
@@ -194,8 +201,8 @@ export default function MemberLoginPage() {
       if (data.status !== "SUCCEEDED" || !data.verified) {
         setErrorMsg(
           data.message ||
-            data.error ||
-            "Face verification failed. Please try again."
+          data.error ||
+          "Face verification failed. Please try again."
         );
         setLivenessSessionId(null);
         return;
@@ -203,8 +210,8 @@ export default function MemberLoginPage() {
 
       console.log(
         `Face verification successful for ${cleanMobile}. ` +
-          `Liveness confidence: ${data.liveness_confidence}, ` +
-          `Face similarity: ${data.similarity}`
+        `Liveness confidence: ${data.liveness_confidence}, ` +
+        `Face similarity: ${data.similarity}`
       );
 
       // Final member login
@@ -223,8 +230,8 @@ export default function MemberLoginPage() {
 
       setErrorMsg(
         error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Face operation failed. Please try again."
+        error.response?.data?.message ||
+        "Face operation failed. Please try again."
       );
 
       setLivenessSessionId(null);
