@@ -7,6 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Webcam from "react-webcam";
+import axios from "axios";
+
+const FastAPI = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_FASTAPI_URL,
+});
 
 import {
   Dialog,
@@ -158,16 +163,16 @@ export default function MemberPortal() {
 
           const mappedHistory = Array.isArray(history)
             ? history.map((log) => ({
-                date: log.check_in
-                  ? new Date(log.check_in).toLocaleDateString([], {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "N/A",
-                shift: log.shift_name || "Shift",
-                status: log.status || "Completed",
-                hours: parseFloat(log.hours_worked) || 0,
-              }))
+              date: log.check_in
+                ? new Date(log.check_in).toLocaleDateString([], {
+                  month: "short",
+                  day: "numeric",
+                })
+                : "N/A",
+              shift: log.shift_name || "Shift",
+              status: log.status || "Completed",
+              hours: parseFloat(log.hours_worked) || 0,
+            }))
             : [];
 
           setEmployeeData({
@@ -179,13 +184,13 @@ export default function MemberPortal() {
 
             availableShifts: p.shift
               ? [
-                  {
-                    id: p.shift.shift_id,
-                    name: p.shift.shift_name,
-                    startTime: p.shift.shift_start_time,
-                    endTime: p.shift.shift_end_time,
-                  },
-                ]
+                {
+                  id: p.shift.shift_id,
+                  name: p.shift.shift_name,
+                  startTime: p.shift.shift_start_time,
+                  endTime: p.shift.shift_end_time,
+                },
+              ]
               : [],
 
             attendanceHistory: mappedHistory,
@@ -315,9 +320,9 @@ export default function MemberPortal() {
     const a =
       Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
       Math.cos(phi1) *
-        Math.cos(phi2) *
-        Math.sin(deltaLambda / 2) *
-        Math.sin(deltaLambda / 2);
+      Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) *
+      Math.sin(deltaLambda / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
@@ -544,18 +549,18 @@ export default function MemberPortal() {
       // FACE VERIFICATION
       // -----------------------------------------------------
 
-      const res = await AxiosPost("face/verify/", {
+      const res = await FastAPI.post("face/verify", {
         mobile_number: cleanMobile,
         face_image_base64: imageSrc.split(",")[1],
       });
 
-      console.log("FACE VERIFICATION RESULT:", res);
+      console.log("FACE VERIFICATION RESULT:", res.data);
 
       // -----------------------------------------------------
       // FACE VERIFIED
       // -----------------------------------------------------
 
-      if (res?.verified && res?.confidence >= 90) {
+      if (res?.verified && res.data?.confidence >= 90) {
         await submitAttendance(
           "inside",
           "verified",
@@ -571,10 +576,9 @@ export default function MemberPortal() {
         // ---------------------------------------------------
 
         setError(
-          `Face verification failed. Confidence: ${
-            res?.confidence
-              ? res.confidence.toFixed(1)
-              : "N/A"
+          `Face verification failed. Confidence: ${res?.confidence
+            ? res.confidence.toFixed(1)
+            : "N/A"
           }%`
         );
 
@@ -649,7 +653,7 @@ export default function MemberPortal() {
       const shift =
         selectedShift ||
         (employeeData.availableShifts &&
-        employeeData.availableShifts.length > 0
+          employeeData.availableShifts.length > 0
           ? employeeData.availableShifts[0]
           : null);
 
@@ -798,9 +802,8 @@ export default function MemberPortal() {
 
             <p className="text-muted-foreground text-sm">
               {activeTab === "dashboard"
-                ? `Welcome back, ${
-                    employeeData.name.split(" ")[0]
-                  }. System operational.`
+                ? `Welcome back, ${employeeData.name.split(" ")[0]
+                }. System operational.`
                 : "Manage your biometric and deployment data."}
             </p>
 
