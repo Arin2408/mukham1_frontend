@@ -65,7 +65,7 @@ const VirtualIDCard = ({ employee, onClose }) => {
           <div className={`relative w-full h-full transition-transform duration-700 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
 
             {/* FRONT SIDE */}
-            <div className="absolute inset-0 w-full h-full backface-hidden">
+            <div className={`absolute inset-0 w-full h-full backface-hidden card-face card-front ${isFlipped ? 'face-hidden' : ''}`}>
               <div className="w-full h-full rounded-3xl bg-card border border-border overflow-hidden shadow-2xl shadow-blue-500/10 flex flex-col relative">
                 {/* Header band */}
                 <div className="h-36 relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600">
@@ -130,7 +130,7 @@ const VirtualIDCard = ({ employee, onClose }) => {
             </div>
 
             {/* BACK SIDE */}
-            <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+            <div className={`absolute inset-0 w-full h-full backface-hidden card-face rotate-y-180 ${!isFlipped ? 'face-hidden' : ''}`}>
               <div className="w-full h-full rounded-3xl bg-card border border-border overflow-hidden shadow-2xl shadow-purple-500/10 flex flex-col">
                 <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
                 <div className="flex-1 flex flex-col items-center justify-between p-8 text-center">
@@ -183,6 +183,18 @@ const VirtualIDCard = ({ employee, onClose }) => {
         }
         .rotate-y-180 {
           transform: rotateY(180deg);
+        }
+        .card-front {
+          transform: rotateY(0deg);
+        }
+        /* Firefox doesn't apply backface-visibility to children with their own
+           layers (z-index, blur), so the front bled through the back. Hide the
+           facing-away side explicitly, switching at the midpoint of the 700ms flip. */
+        .card-face {
+          transition: visibility 0s linear 350ms;
+        }
+        .face-hidden {
+          visibility: hidden;
         }
       `}</style>
     </div>

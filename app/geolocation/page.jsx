@@ -728,7 +728,8 @@ export default function MapPage() {
 
             </div>
 
-            <div className="space-y-4 relative">
+            {/* isolate: keeps Leaflet's internal z-indexes (400-1000) from covering the navbar */}
+            <div className="space-y-4 relative isolate">
 
               <div
                 id="map"

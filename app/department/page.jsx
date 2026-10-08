@@ -434,10 +434,10 @@ export default function DepartmentPage() {
               ) : (
                 departments.map((dept) => (
                   <Card key={dept.department_id} className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2">
-                        <h3 className="font-medium">{dept.details}</h3>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                      <div className="space-y-2 min-w-0">
+                        <h3 className="font-medium break-words">{dept.details}</h3>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Building2 className="w-4 h-4" />
                             <span>
@@ -458,7 +458,7 @@ export default function DepartmentPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 shrink-0">
                         {/* 📅 Bulk Shift Assignment Dialog */}
                         <Dialog>
                           <DialogTrigger asChild>
