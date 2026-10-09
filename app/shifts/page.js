@@ -249,7 +249,11 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || `Failed to ${currentShift ? "update" : "create"} shift`,
+        description:
+          error.response?.data?.detail ||
+          error.response?.data?.error ||
+          Object.values(error.response?.data || {}).flat()[0] ||
+          `Failed to ${currentShift ? "update" : "create"} shift`,
       });
     } finally {
       setIsLoading(false);
@@ -441,11 +445,13 @@ export default function ShiftsPage() {
                       <div key={shift.shift_id} className="relative h-10 group">
                         {isOver ? (
                           <>
-                            <div className={`absolute h-full rounded-l border-y border-l ${color} flex items-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
+                            <div className={`absolute h-full rounded-l border-y border-l ${color} flex flex-col justify-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
                               <span className="text-xs font-bold text-foreground truncate">{shift.shift_name}</span>
+                              <span className="text-[8px] text-foreground/30 tracking-tight truncate">{dept}</span>
                             </div>
-                            <div className={`absolute h-full rounded-r border-y border-r ${color} flex items-center px-3`} style={{ left: '0%', width: `${end}%` }}>
+                            <div className={`absolute h-full rounded-r border-y border-r ${color} flex flex-col justify-center px-3`} style={{ left: '0%', width: `${end}%` }}>
                               <span className="text-xs font-bold text-foreground truncate opacity-0 group-hover:opacity-100">{shift.shift_name}</span>
+                              <span className="text-[8px] text-foreground/30 tracking-tight truncate opacity-0 group-hover:opacity-100">{dept}</span>
                             </div>
                           </>
                         ) : (
