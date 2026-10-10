@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { mediaUrl } from '@/context/AuthContext';
 import { QrCode, Download, Printer, X, RotateCw, ScanFace, BadgeCheck, Building2, Briefcase, Hash } from 'lucide-react';
 
 const VirtualIDCard = ({ employee, onClose }) => {
@@ -15,9 +16,7 @@ const VirtualIDCard = ({ employee, onClose }) => {
   const qrData = `MUKHAM VERIFIED EMPLOYEE\nName: ${fullName}\nID: #${employee.employee_id}\nMobile: ${employee.mobile_number}\nDept: ${employee.department_name}\nDesig: ${employee.designation_name}\nStatus: ACTIVE & VALIDATED`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
   const placeholderUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
-  const photoUrl = employee.photo
-    ? (employee.photo.startsWith('http') ? employee.photo : `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}${employee.photo}`)
-    : placeholderUrl;
+  const photoUrl = mediaUrl(employee.photo) || placeholderUrl;
 
   const details = [
     { label: "Employee ID", value: `#${employee.employee_id}`, icon: Hash, mono: true },

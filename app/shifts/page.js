@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
+import { FastAPI } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { jwtDecode } from "jwt-decode";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -48,13 +48,69 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+
 // Shift Timeline Logic is now inlined for maximum reliability
+const getErrorMessage = (error, fallback = "Something went wrong") => {
+  const detail = error?.response?.data?.detail;
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item?.msg || "Validation error";
+      })
+      .join(", ");
+  }
+
+  if (detail && typeof detail === "object") {
+    return detail.msg || detail.message || fallback;
+  }
+
+  if (typeof error?.message === "string") {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+// "HH:MM" -> minutes since midnight (null when empty/invalid)
+const toMinutes = (value) => {
+  if (!value) return null;
+  const [h, m] = value.split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+};
+
+// An end time before the start time means the shift ends the next day.
+const isOvernightShift = (start, end) => {
+  const s = toMinutes(start);
+  const e = toMinutes(end);
+  return s !== null && e !== null && e < s;
+};
+
+const shiftDurationMinutes = (start, end) => {
+  const s = toMinutes(start);
+  const e = toMinutes(end);
+  if (s === null || e === null || s === e) return 0;
+  return e > s ? e - s : e + 24 * 60 - s;
+};
+
+const formatDuration = (minutes) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+};
+
+const normalizeName = (name) => name.trim().replace(/\s+/g, " ");
 
 export default function ShiftsPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { orgId } = useAuth(); // Get orgId from AuthContext
-  
+
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -94,18 +150,26 @@ export default function ShiftsPage() {
         return false;
       }
 
-      // Use AxiosPost from AuthContext
-      await AxiosPost("token/verify/", { token });
+      const { data } = await FastAPI.get("auth/verify");
+      // Shift management is organization-only.
+      if (data?.role === "employee") {
+        router.replace("/member");
+        return false;
+      }
       return true;
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || "Invalid token",
+        description: getErrorMessage(error, "Could not verify your session"),
       });
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("org_id");
-      router.push("/login");
+      // Only an invalid/expired token ends the session; a network or
+      // server error should not log the user out.
+      if (error?.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("org_id");
+        router.push("/login");
+      }
       return false;
     }
   }, [router, toast]);
@@ -114,15 +178,16 @@ export default function ShiftsPage() {
     if (!(await verifyToken())) return;
 
     try {
-      const data = await AxiosGet("departments/");
+      const response = await FastAPI.get("departments");
+      const data = response.data;
       setDepartments(data);
 
       if (data.length > 0) {
         setFormData(prev => ({
           ...prev,
-          department: { 
-            id: data[0].department_id.toString(), 
-            name: data[0].details 
+          department: {
+            id: data[0].department_id.toString(),
+            name: data[0].details
           },
         }));
       }
@@ -130,7 +195,7 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || "Failed to fetch departments",
+        description: getErrorMessage(error, "Failed to fetch departments"),
       });
     }
   }, [toast, verifyToken]);
@@ -139,13 +204,13 @@ export default function ShiftsPage() {
     if (!(await verifyToken())) return;
 
     try {
-      const data = await AxiosGet("shifts/");
-      setShifts(data);
+      const response = await FastAPI.get("shifts");
+      setShifts(response.data);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || "Failed to fetch shifts",
+        description: getErrorMessage(error, "Failed to fetch shifts"),
       });
     }
   }, [toast, verifyToken]);
@@ -180,7 +245,7 @@ export default function ShiftsPage() {
       shift_name: "",
       shift_start_time: "",
       shift_end_time: "",
-      department: { 
+      department: {
         id: departments.length > 0 ? departments[0].department_id.toString() : "",
         name: departments.length > 0 ? departments[0].details : ""
       },
@@ -195,8 +260,11 @@ export default function ShiftsPage() {
         shift_start_time: shift.shift_start_time,
         shift_end_time: shift.shift_end_time,
         department: {
-          id: shift.department.toString(),
-          name: departments.find(d => d.department_id === shift.department)?.details || ""
+          id: shift.department_id.toString(),
+          name:
+            departments.find(
+              d => d.department_id === shift.department_id
+            )?.details || ""
         },
       });
       setCurrentShift(shift);
@@ -206,36 +274,85 @@ export default function ShiftsPage() {
     setIsOpen(true);
   };
 
+  // Same rules the backend enforces, shown before submitting.
+  const getFormError = () => {
+    const name = normalizeName(formData.shift_name);
+    const { shift_start_time: start, shift_end_time: end } = formData;
+    const departmentId = Number(formData.department.id);
+
+    if (!name) return "Shift name is required.";
+    if (!departmentId) return "Select a department.";
+    if (!start || !end) return null;
+    if (start === end) return "Start time and end time cannot be the same.";
+
+    const sameDepartment = shifts.filter(
+      (s) =>
+        s.department_id === departmentId &&
+        s.shift_id !== currentShift?.shift_id
+    );
+
+    const sameName = sameDepartment.find(
+      (s) => normalizeName(s.shift_name).toLowerCase() === name.toLowerCase()
+    );
+    if (sameName) {
+      return `A shift named "${sameName.shift_name}" already exists in this department.`;
+    }
+
+    const sameTime = sameDepartment.find(
+      (s) => s.shift_start_time === start && s.shift_end_time === end
+    );
+    if (sameTime) {
+      return `"${sameTime.shift_name}" already uses ${start}-${end} in this department.`;
+    }
+
+    return null;
+  };
+
+  const formError = getFormError();
+  const formOvernight = isOvernightShift(
+    formData.shift_start_time,
+    formData.shift_end_time
+  );
+  const formDuration = shiftDurationMinutes(
+    formData.shift_start_time,
+    formData.shift_end_time
+  );
+
   const handleShiftSubmit = async (e) => {
     e.preventDefault();
+    if (formError) {
+      toast({ variant: "destructive", title: "Error", description: formError });
+      return;
+    }
     if (!(await verifyToken())) return;
 
     setIsLoading(true);
     try {
       const shiftData = {
-        shift_name: formData.shift_name,
+        shift_name: normalizeName(formData.shift_name),
         shift_start_time: formData.shift_start_time,
         shift_end_time: formData.shift_end_time,
         department: parseInt(formData.department.id),
-        org_id: parseInt(orgId),
       };
 
       if (currentShift) {
         // Update existing shift
-        await AxiosPost(
-          `shifts/update/${currentShift.shift_id}/`,
-          shiftData,
-          "PUT"
+        await FastAPI.put(
+          `shifts/update/${currentShift.shift_id}`,
+          shiftData
         );
-        
+
         toast({
           title: "Success",
           description: "Shift updated successfully.",
         });
       } else {
         // Create new shift
-        await AxiosPost("add-shift/", shiftData);
-        
+        await FastAPI.post(
+          "add-shift",
+          shiftData
+        );
+
         toast({
           title: "Success",
           description: "Shift created successfully.",
@@ -249,7 +366,10 @@ export default function ShiftsPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || `Failed to ${currentShift ? "update" : "create"} shift`,
+        description: getErrorMessage(
+          error,
+          `Failed to ${currentShift ? "update" : "create"} shift`
+        ),
       });
     } finally {
       setIsLoading(false);
@@ -260,19 +380,24 @@ export default function ShiftsPage() {
     if (!(await verifyToken())) return;
 
     try {
-      await AxiosPost(`shifts/delete/${shiftId}/`, {}, "DELETE");
+      const { data } = await FastAPI.delete(
+        `shifts/delete/${shiftId}`
+      );
+      const unassigned = data?.unassigned_employees || 0;
 
       toast({
         title: "Shift Deleted",
-        description: "Shift deleted successfully.",
+        description: unassigned
+          ? `Shift deleted. ${unassigned} employee${unassigned === 1 ? " is" : "s are"} now without a shift.`
+          : "Shift deleted successfully.",
       });
-      
+
       fetchShifts();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete shift",
+        description: getErrorMessage(error, "Failed to delete shift"),
       });
     }
   };
@@ -333,6 +458,13 @@ export default function ShiftsPage() {
                       />
                     </div>
                   </div>
+                  {formDuration > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {formOvernight
+                        ? `Overnight shift: ends at ${formData.shift_end_time} the next day (${formatDuration(formDuration)}).`
+                        : `Shift length: ${formatDuration(formDuration)}.`}
+                    </p>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="department">Department</Label>
                     <Select
@@ -356,14 +488,24 @@ export default function ShiftsPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {departments.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Create a department first; every shift belongs to one.
+                      </p>
+                    )}
                   </div>
+                  {formError && normalizeName(formData.shift_name) && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {formError}
+                    </p>
+                  )}
                   <DialogFooter>
                     <DialogClose asChild>
                       <Button type="button" variant="outline">
                         Cancel
                       </Button>
                     </DialogClose>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading || Boolean(formError)}>
                       {isLoading ? "Processing..." : currentShift ? "Update Shift" : "Create Shift"}
                     </Button>
                   </DialogFooter>
@@ -394,9 +536,9 @@ export default function ShiftsPage() {
                   const max = Math.max(...counts, 1);
                   return counts.filter((_, i) => i % 2 === 0).map((c, i) => (
                     <div key={i} className="flex items-center gap-2 group">
-                      <span className="text-xs text-foreground/30 w-8">{(i*2).toString().padStart(2, '0')}:00</span>
+                      <span className="text-xs text-foreground/30 w-8">{(i * 2).toString().padStart(2, '0')}:00</span>
                       <div className="flex-1 h-1.5 bg-foreground/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500/50 transition-all duration-1000" style={{ width: `${(c/max)*100}%` }} />
+                        <div className="h-full bg-emerald-500/50 transition-all duration-1000" style={{ width: `${(c / max) * 100}%` }} />
                       </div>
                     </div>
                   ));
@@ -430,19 +572,22 @@ export default function ShiftsPage() {
                 {/* Bars */}
                 <div className="space-y-3 py-2 relative z-10 h-full overflow-y-auto custom-scrollbar">
                   {shifts.map((shift, i) => {
-                    const getP = (t) => { if(!t) return 0; const [h,m] = t.split(':').map(Number); return ((h+(m||0)/60)/24)*100; };
+                    const getP = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return ((h + (m || 0) / 60) / 24) * 100; };
                     const start = getP(shift.shift_start_time);
                     const end = getP(shift.shift_end_time);
                     const isOver = end <= start;
                     const color = isOver ? 'bg-purple-500/20 border-purple-400/30' : 'bg-blue-500/20 border-blue-400/30';
-                    const dept = departments.find(d => d.department_id === shift.department)?.details || 'Staff';
+                    const dept = departments.find(
+                      d => d.department_id === shift.department_id
+                    )?.details || "Staff";
 
                     return (
                       <div key={shift.shift_id} className="relative h-10 group">
                         {isOver ? (
                           <>
-                            <div className={`absolute h-full rounded-l border-y border-l ${color} flex items-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
+                            <div className={`absolute h-full rounded-l border-y border-l ${color} flex flex-col justify-center px-3`} style={{ left: `${start}%`, right: '0%' }}>
                               <span className="text-xs font-bold text-foreground truncate">{shift.shift_name}</span>
+                              <span className="text-[8px] text-foreground/30 tracking-tight truncate">{dept} · until {shift.shift_end_time}</span>
                             </div>
                             <div className={`absolute h-full rounded-r border-y border-r ${color} flex items-center px-3`} style={{ left: '0%', width: `${end}%` }}>
                               <span className="text-xs font-bold text-foreground truncate opacity-0 group-hover:opacity-100">{shift.shift_name}</span>
@@ -470,14 +615,16 @@ export default function ShiftsPage() {
                 <TableHead>Shift Name</TableHead>
                 <TableHead>Start Time</TableHead>
                 <TableHead>End Time</TableHead>
+                <TableHead>Duration</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Employees</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {shifts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                     No shifts found
                   </TableCell>
                 </TableRow>
@@ -486,10 +633,21 @@ export default function ShiftsPage() {
                   <TableRow key={shift.shift_id}>
                     <TableCell>{shift.shift_name}</TableCell>
                     <TableCell>{shift.shift_start_time}</TableCell>
-                    <TableCell>{shift.shift_end_time}</TableCell>
                     <TableCell>
-                      {departments.find(d => d.department_id === shift.department)?.details || "N/A"}
+                      {shift.shift_end_time}
+                      {isOvernightShift(shift.shift_start_time, shift.shift_end_time) && (
+                        <span className="ml-2 rounded-full bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-300">
+                          +1 day
+                        </span>
+                      )}
                     </TableCell>
+                    <TableCell>
+                      {formatDuration(shiftDurationMinutes(shift.shift_start_time, shift.shift_end_time))}
+                    </TableCell>
+                    <TableCell>
+                      {departments.find(d => d.department_id === shift.department_id)?.details || "N/A"}
+                    </TableCell>
+                    <TableCell>{shift.employee_count ?? 0}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
                         <Button
@@ -512,12 +670,14 @@ export default function ShiftsPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Shift</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete this shift? This action cannot be undone.
+                                Are you sure you want to delete &quot;{shift.shift_name}&quot;? This action cannot be undone.
+                                {shift.employee_count > 0 &&
+                                  ` ${shift.employee_count} employee${shift.employee_count === 1 ? " is" : "s are"} assigned to it and will be left without a shift.`}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
+                              <AlertDialogAction
                                 onClick={() => handleDelete(shift.shift_id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >

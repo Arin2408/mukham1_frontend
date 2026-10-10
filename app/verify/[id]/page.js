@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, User, Phone, Briefcase, Download, ShieldCheck } from "lucide-react";
+import { FastAPI, mediaUrl } from "@/context/AuthContext";
 
 export default function VerificationPage() {
   const { id } = useParams();
@@ -12,14 +13,11 @@ export default function VerificationPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, this would be a public API call
-    // For now, we'll fetch from the local storage or simulate the data
+    // Public endpoint: returns only the details printed on the ID card.
     const fetchEmployee = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}/api/employees/`);
-        const data = await response.json();
-        const found = data.find(emp => emp.employee_id.toString() === id);
-        setEmployee(found);
+        const { data } = await FastAPI.get(`employees/${encodeURIComponent(id)}/card`);
+        setEmployee(data);
       } catch (err) {
         console.error("Failed to fetch employee", err);
       } finally {
@@ -36,12 +34,10 @@ export default function VerificationPage() {
       "BEGIN:VCARD",
       "VERSION:3.0",
       `FN:${employee.first_name} ${employee.last_name}`,
-      `TEL;TYPE=CELL:${employee.mobile_number}`,
-      `EMAIL:${employee.email}`,
-      `ORG:MUKHAM Systems`,
-      `TITLE:${employee.designation_name}`,
+      `ORG:${employee.organisation_name || "MUKHAM Systems"}`,
+      employee.designation_name ? `TITLE:${employee.designation_name}` : null,
       "END:VCARD"
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     const blob = new Blob([vCardData], { type: "text/vcard" });
     const url = window.URL.createObjectURL(blob);
@@ -86,7 +82,7 @@ export default function VerificationPage() {
             <div className="flex flex-col items-center">
               <div className="w-24 h-24 rounded-2xl border-2 border-foreground/10 bg-foreground/5 overflow-hidden mb-4 shadow-xl">
                 <img 
-                  src={employee.photo ? `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}${employee.photo}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.first_name}`} 
+                  src={mediaUrl(employee.photo) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.first_name}`} 
                   alt={employee.first_name}
                   onError={(e) => {
                     // Photo file missing on server: fall back to placeholder

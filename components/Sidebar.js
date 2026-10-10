@@ -21,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Moon,
-  Sun
+  Sun,
+  Network,
+  CalendarCheck
 } from "lucide-react"
 
 const SIDEBAR_WIDTH = "14rem"
@@ -86,6 +88,7 @@ export function Sidebar() {
   const navItems = isMember
     ? [
         { name: "Dashboard", href: "/member?tab=dashboard", icon: LayoutDashboard },
+        { name: "My Tasks", href: "/member?tab=tasks", icon: CalendarCheck },
         { name: "Profile", href: "/member?tab=profile", icon: User },
       ]
     : [
@@ -94,6 +97,8 @@ export function Sidebar() {
         { name: "Designation", href: "/designation", icon: Briefcase },
         { name: "Department", href: "/department", icon: Building2 },
         { name: "Employees", href: "/employees", icon: Users },
+        { name: "Org Chart", href: "/org-chart", icon: Network },
+        { name: "Tasks", href: "/tasks", icon: CalendarCheck },
         { name: "Location", href: "/geolocation", icon: MapPin },
         { name: "Shifts", href: "/shifts", icon: CalendarClock },
         { name: "Profile", href: "/profile", icon: User },

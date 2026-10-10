@@ -21,7 +21,7 @@ import {
 import Link from "next/link"
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
-import { AxiosGet, AxiosPost } from "@/context/AuthContext";
+import { FastAPI, FastAPIGet } from "@/context/AuthContext";
 import { useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -77,70 +77,142 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+
   const verifyToken = useCallback(async () => {
     const token = localStorage.getItem("access_token");
+
     if (!token) {
       router.push("/login");
       return false;
     }
+
+    // Member tokens get 403 from the organization endpoints below.
+    if (localStorage.getItem("user_role") === "employee") {
+      router.replace("/member");
+      return false;
+    }
+
     try {
       const decodedToken = jwtDecode(token);
-      if (Date.now() >= decodedToken.exp * 1000) {
+
+      if (!decodedToken.exp || Date.now() >= decodedToken.exp * 1000) {
         localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         router.push("/login");
         return false;
       }
-      await AxiosPost("token/verify/", { token });
+
       return true;
     } catch (error) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       router.push("/login");
       return false;
     }
   }, [router]);
 
+
+
   const fetchDashboardData = useCallback(async () => {
     if (!(await verifyToken())) return;
 
     try {
-      // 1. Fetch Employees
-      const employees = await AxiosGet("list/");
-      
-      // 2. Fetch Shifts
-      const shifts = await AxiosGet("shifts/");
+      // 1. Fetch employees from FastAPI
+      const employeesResponse = await FastAPI.get("employees");
 
-      // 3. Fetch Locations
-      const locations = await AxiosGet("locations/");
+      const employees = Array.isArray(employeesResponse.data)
+        ? employeesResponse.data
+        : [];
 
-      // 4. Fetch Attendance Leaderboard (for average rate)
-      const leaderboard = await AxiosGet("departments/leaderboard/");
-      const avgRate = leaderboard.length > 0 
-        ? leaderboard.reduce((acc, curr) => acc + curr.punctuality_score, 0) / leaderboard.length 
-        : 0;
+      // 2. Fetch shifts from FastAPI
+      const shiftsResponse = await FastAPI.get("shifts");
+
+      const shifts = Array.isArray(shiftsResponse.data)
+        ? shiftsResponse.data
+        : [];
+
+      // 3. Fetch locations from FastAPI
+      const locationsResponse = await FastAPI.get("locations");
+
+      const locations = Array.isArray(locationsResponse.data)
+        ? locationsResponse.data
+        : [];
+
+      // 4. Department punctuality leaderboard
+      let leaderboard = [];
+
+      try {
+        const leaderboardResponse = await FastAPIGet(
+          "departments/leaderboard"
+        );
+
+        leaderboard = Array.isArray(leaderboardResponse)
+          ? leaderboardResponse
+          : [];
+      } catch (leaderboardError) {
+        console.error(
+          "Failed to fetch leaderboard:",
+          leaderboardError.response?.status,
+          leaderboardError.response?.data || leaderboardError.message
+        );
+      }
+
+      const avgRate =
+        leaderboard.length > 0
+          ? leaderboard.reduce(
+            (total, item) =>
+              total + (Number(item.punctuality_score) || 0),
+            0
+          ) / leaderboard.length
+          : 0;
 
       setDashboardStats({
         totalEmployees: employees.length,
         activeShifts: shifts.length,
         activeLocations: locations.length,
-        attendanceRate: Math.round(avgRate)
+        attendanceRate: Math.round(avgRate),
       });
 
-      // Calculate Role Distribution from actual employees
+      // Calculate role distribution from employee data
       const distribution = {};
-      employees.forEach(emp => {
-        const role = emp.designation_name || "Unassigned";
+
+      employees.forEach((employee) => {
+        const role = employee.designation_name || "Unassigned";
         distribution[role] = (distribution[role] || 0) + 1;
       });
-      
-      const roleArray = Object.keys(distribution).map(name => ({
-        name,
-        value: distribution[name]
-      }));
-      setRoleStats(roleArray.slice(0, 4)); // Top 4 roles
 
+      const roleArray = Object.entries(distribution).map(
+        ([name, value]) => ({
+          name,
+          value,
+        })
+      );
+
+      setRoleStats(roleArray.slice(0, 4));
     } catch (error) {
-      console.error("Dashboard fetch error:", error);
+      console.error(
+        "Dashboard fetch error:",
+        error.response?.status,
+        error.response?.data || error.message
+      );
+
+      if (error.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        router.push("/login");
+        return;
+      }
+
+      toast({
+        title: "Dashboard error",
+        description:
+          error.response?.data?.detail ||
+          "Unable to load dashboard data.",
+        variant: "destructive",
+      });
     }
-  }, [verifyToken]);
+  }, [verifyToken, router, toast]);
+
 
   useEffect(() => {
     fetchDashboardData();
@@ -187,28 +259,28 @@ export default function DashboardPage() {
             <Card className="quantanex-card p-8 lg:col-span-1">
               <h3 className="text-lg font-semibold text-foreground mb-1">Role Distribution</h3>
               <p className="text-xs text-muted-foreground mb-8">Breakdown of organizational roles</p>
-              
+
               <div className="h-[250px] relative">
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-3xl font-bold text-foreground">{dashboardStats.totalEmployees}</span>
                   <span className="text-xs text-muted-foreground font-bold">Total</span>
                 </div>
                 <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={roleStats}
-                        innerRadius={75}
-                        outerRadius={95}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {roleStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip {...tooltipStyle} />
-                    </PieChart>
+                  <PieChart>
+                    <Pie
+                      data={roleStats}
+                      innerRadius={75}
+                      outerRadius={95}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {roleStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip {...tooltipStyle} />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
 
@@ -219,7 +291,7 @@ export default function DashboardPage() {
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                       <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{role.name}</span>
                     </div>
-                    <span className="text-sm font-medium text-foreground">{role.value} ({(role.value/dashboardStats.totalEmployees*100).toFixed(0)}%)</span>
+                    <span className="text-sm font-medium text-foreground">{role.value} ({(role.value / dashboardStats.totalEmployees * 100).toFixed(0)}%)</span>
                   </div>
                 )) : (
                   <p className="text-xs text-muted-foreground text-center">No data found</p>
@@ -250,7 +322,7 @@ export default function DashboardPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.2)" />
-                    <XAxis 
+                    <XAxis
                       dataKey="name"
                       stroke="rgba(128,128,128,0.8)"
                       fontSize={11}
@@ -264,9 +336,9 @@ export default function DashboardPage() {
                       tickLine={false}
                       axisLine={false}
                     />
-                    <Tooltip {...tooltipStyle} cursor={{fill: 'rgba(128,128,128,0.1)'}} />
-                    <Bar 
-                      dataKey="attendance" 
+                    <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(128,128,128,0.1)' }} />
+                    <Bar
+                      dataKey="attendance"
                       fill="url(#barGradient)"
                       radius={[20, 20, 20, 20]}
                       barSize={20}

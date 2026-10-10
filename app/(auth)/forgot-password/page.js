@@ -16,7 +16,7 @@ import Link from "next/link"
 import { AuthShell } from "@/components/AuthShell"
 import { useToast } from "@/hooks/use-toast"
 
-import { AxiosPost } from "@/context/AuthContext"
+import { FastAPIPost, apiErrorMessage } from "@/context/AuthContext"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -26,10 +26,9 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    console.log("DEBUG: Sending reset link for:", email)
 
     try {
-      const data = await AxiosPost("forgot-password/", { email })
+      const data = await FastAPIPost("forgot-password", { email })
 
       toast({
         title: "Success",
@@ -37,7 +36,7 @@ export default function ForgotPasswordPage() {
       })
     } catch (error) {
       console.error("Forgot password error:", error)
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Something went wrong. Please try again."
+      const errorMessage = apiErrorMessage(error, "Something went wrong. Please try again.")
       toast({
         variant: "destructive",
         title: "Error",

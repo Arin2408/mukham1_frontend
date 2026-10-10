@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
+import { FastAPI, FastAPIGet, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,7 @@ import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { Building2, Pencil, Edit2, Trash2, Plus, Info, Users, Briefcase } from "lucide-react";
 
+
 export default function DesignationPage() {
   const [selectedDesignation, setSelectedDesignation] = useState(null);
   const [formData, setFormData] = useState({
@@ -77,7 +78,7 @@ export default function DesignationPage() {
         router.push("/login");
         return false;
       }
-      await AxiosPost("token/verify/", { token });
+      await FastAPI.get("auth/verify");
       return true;
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Invalid token" });
@@ -92,14 +93,21 @@ export default function DesignationPage() {
   const fetchData = useCallback(async () => {
     if (!orgId) return;
     if (!(await verifyToken())) return;
-    
+
     setIsLoading(true);
     try {
-      const [designationsData, departmentsData, employeesData] = await Promise.all([
-        AxiosGet("designations/"),
-        AxiosGet("departments/"),
-        AxiosGet(`list/?org_id=${orgId}`),
-      ]);
+      const [designationsResponse, departmentsResponse, employeesData] =
+        await Promise.all([
+          FastAPI.get("designations"),
+          FastAPI.get("departments"),
+          FastAPIGet("employees"),
+        ]);
+
+      console.log("DESIGNATIONS:", designationsResponse.data);
+      console.log("DEPARTMENTS FROM FASTAPI:", departmentsResponse.data);
+
+      const designationsData = designationsResponse.data;
+      const departmentsData = departmentsResponse.data;
       setDesignations(designationsData);
       setDepartments(departmentsData);
       setEmployees(employeesData);
@@ -133,9 +141,9 @@ export default function DesignationPage() {
     }
     setIsLoading(true);
     try {
-      await AxiosPost("designations/add/", {
-        details: formData.details,
+      await FastAPI.post("designations/add", {
         department: parseInt(formData.department),
+        details: formData.details,
       });
       toast({ title: "Success", description: "Designation created successfully" });
       setFormData({ details: "", department: "" });
@@ -156,13 +164,16 @@ export default function DesignationPage() {
     try {
       console.log("DEBUG: Updating designation", editingDesignation.designation_id, {
         details: editingDesignation.details,
-        department: parseInt(editingDesignation.department)
+        department: parseInt(editingDesignation.department_id)
       });
-      
-      await AxiosPost(`designations/update/${editingDesignation.designation_id}/`, {
-        details: editingDesignation.details,
-        department: parseInt(editingDesignation.department),
-      }, "put");
+
+      await FastAPI.put(
+        `designations/update/${editingDesignation.designation_id}`,
+        {
+          details: editingDesignation.details,
+          department: parseInt(editingDesignation.department_id),
+        }
+      );
 
       toast({ title: "Success", description: "Designation updated successfully" });
       setEditingDesignation(null);
@@ -171,8 +182,8 @@ export default function DesignationPage() {
       console.error("Update error detail:", error);
       let errorMessage = "Failed to update designation";
       if (error.response?.data) {
-        errorMessage = typeof error.response.data === 'string' 
-          ? error.response.data 
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
           : Object.entries(error.response.data).map(([k, v]) => `${k}: ${v}`).join(", ");
       } else if (error.message) {
         errorMessage = error.message;
@@ -187,7 +198,9 @@ export default function DesignationPage() {
     if (!(await verifyToken())) return;
     try {
       console.log("DEBUG: Deleting designation", id);
-      await AxiosPost(`designations/delete/${id}/`, {}, "delete");
+      await FastAPI.delete(
+        `designations/delete/${id}`
+      );
       toast({ title: "Success", description: "Designation deleted successfully" });
       if (selectedDesignation?.designation_id === id) setSelectedDesignation(null);
       fetchData();
@@ -195,8 +208,8 @@ export default function DesignationPage() {
       console.error("Delete error detail:", error);
       let errorMessage = "Failed to delete designation";
       if (error.response?.data) {
-        errorMessage = typeof error.response.data === 'string' 
-          ? error.response.data 
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
           : Object.entries(error.response.data).map(([k, v]) => `${k}: ${v}`).join(", ");
       } else if (error.message) {
         errorMessage = error.message;
@@ -206,7 +219,15 @@ export default function DesignationPage() {
   };
 
   const getDepartmentName = (id) => {
-    const dept = departments.find((d) => d.department_id.toString() === id.toString());
+    console.log("Looking for department ID:", id);
+    console.log("Available departments:", departments);
+
+    const dept = departments.find(
+      (d) => String(d.department_id) === String(id)
+    );
+
+    console.log("Matched department:", dept);
+
     return dept ? dept.details : "N/A";
   };
 
@@ -285,15 +306,14 @@ export default function DesignationPage() {
                         return (
                           <TableRow
                             key={designation.designation_id}
-                            className={`border-foreground/5 hover:bg-foreground/[0.02] transition-colors cursor-pointer ${
-                              selectedDesignation?.designation_id === designation.designation_id ? 'bg-foreground/[0.05]' : ''
-                            }`}
+                            className={`border-foreground/5 hover:bg-foreground/[0.02] transition-colors cursor-pointer ${selectedDesignation?.designation_id === designation.designation_id ? 'bg-foreground/[0.05]' : ''
+                              }`}
                             onClick={() => setSelectedDesignation(designation)}
                           >
                             <TableCell className="font-medium text-foreground/90">{designation.details}</TableCell>
                             <TableCell>
                               <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">
-                                {getDepartmentName(designation.department)}
+                                {getDepartmentName(designation.department_id)}
                               </span>
                             </TableCell>
                             <TableCell className="text-xs font-mono text-foreground/60">
@@ -312,76 +332,76 @@ export default function DesignationPage() {
                                       <Pencil className="h-4 w-4" />
                                     </Button>
                                   </DialogTrigger>
-                                <DialogContent className="bg-card border-foreground/10 text-foreground">
-                                  <DialogHeader>
-                                    <DialogTitle>Edit Designation</DialogTitle>
-                                  </DialogHeader>
-                                  <form onSubmit={handleEdit} className="space-y-4">
-                                    <div className="space-y-2">
-                                      <label className="text-sm font-medium">Designation Name</label>
-                                      <Input
-                                        value={editingDesignation?.details}
-                                        onChange={(e) => handleInputChange("details", e.target.value)}
-                                        className="bg-foreground/5 border-foreground/10 text-foreground"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-sm font-medium">Department</label>
-                                      <Select
-                                        value={editingDesignation?.department.toString()}
-                                        onValueChange={(value) => handleInputChange("department", value)}
-                                      >
-                                        <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {departments.map((dept) => (
-                                            <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
-                                              {dept.details}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <DialogFooter>
-                                      <DialogClose asChild>
-                                        <Button type="button" variant="outline">Cancel</Button>
-                                      </DialogClose>
-                                      <Button type="submit" disabled={isLoading}>
-                                        {isLoading ? "Updating..." : "Update Designation"}
-                                      </Button>
-                                    </DialogFooter>
-                                  </form>
-                                </DialogContent>
-                              </Dialog>
+                                  <DialogContent className="bg-card border-foreground/10 text-foreground">
+                                    <DialogHeader>
+                                      <DialogTitle>Edit Designation</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleEdit} className="space-y-4">
+                                      <div className="space-y-2">
+                                        <label className="text-sm font-medium">Designation Name</label>
+                                        <Input
+                                          value={editingDesignation?.details}
+                                          onChange={(e) => handleInputChange("details", e.target.value)}
+                                          className="bg-foreground/5 border-foreground/10 text-foreground"
+                                          required
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <label className="text-sm font-medium">Department</label>
+                                        <Select
+                                          value={editingDesignation?.department_id?.toString()}
+                                          onValueChange={(value) => handleInputChange("department", value)}
+                                        >
+                                          <SelectTrigger className="bg-foreground/5 border-foreground/10 text-foreground">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {departments.map((dept) => (
+                                              <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
+                                                {dept.details}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <DialogFooter>
+                                        <DialogClose asChild>
+                                          <Button type="button" variant="outline">Cancel</Button>
+                                        </DialogClose>
+                                        <Button type="submit" disabled={isLoading}>
+                                          {isLoading ? "Updating..." : "Update Designation"}
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
 
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent border-foreground/10 hover:bg-destructive/10 text-foreground">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="bg-card border-foreground/10 text-foreground">
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Designation</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-foreground/60">
-                                      Are you sure you want to delete this designation?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-transparent border-foreground/10 text-foreground">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(designation.designation_id)}
-                                      className="bg-destructive text-white hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent border-foreground/10 hover:bg-destructive/10 text-foreground">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="bg-card border-foreground/10 text-foreground">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Designation</AlertDialogTitle>
+                                      <AlertDialogDescription className="text-foreground/60">
+                                        Are you sure you want to delete this designation?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="bg-transparent border-foreground/10 text-foreground">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(designation.designation_id)}
+                                        className="bg-destructive text-white hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })
@@ -402,9 +422,9 @@ export default function DesignationPage() {
                     <span className="text-xs font-bold">Designation Detail</span>
                   </div>
                   <h3 className="text-2xl font-bold text-foreground">{selectedDesignation.details}</h3>
-                  <p className="text-sm text-primary/80 font-medium">{getDepartmentName(selectedDesignation.department)}</p>
+                  <p className="text-sm text-primary/80 font-medium">{getDepartmentName(selectedDesignation.department_id)}</p>
                 </div>
-                
+
                 <div className="p-6 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-foreground/5 border border-foreground/10">

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Search, Bell, User, LayoutDashboard, Settings, Building2, Users, Clock } from "lucide-react"
+import { Search, Bell, User, LayoutDashboard, Settings, Building2, Users, Clock, Network, CalendarCheck } from "lucide-react"
 
 export function Header() {
   const [isEmbedded, setIsEmbedded] = useState(false)
@@ -28,6 +28,7 @@ export function Header() {
   const navItems = isMember 
     ? [
         { name: "Dashboard", href: "/member?tab=dashboard", icon: LayoutDashboard },
+        { name: "My Tasks", href: "/member?tab=tasks", icon: CalendarCheck },
         { name: "Profile", href: "/member?tab=profile", icon: User },
       ]
     : [
@@ -35,6 +36,8 @@ export function Header() {
         { name: "Designation", href: "/designation", icon: Settings },
         { name: "Department", href: "/department", icon: Building2 },
         { name: "Employees", href: "/employees", icon: Users },
+        { name: "Org Chart", href: "/org-chart", icon: Network },
+        { name: "Tasks", href: "/tasks", icon: CalendarCheck },
         { name: "Location", href: "/geolocation", icon: Building2 },
         { name: "Shifts", href: "/shifts", icon: Clock },
         { name: "Profile", href: "/profile", icon: User },

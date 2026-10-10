@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { AxiosGet, AxiosPost, useAuth } from "@/context/AuthContext";
+import { FastAPIGet, FastAPIPost, apiErrorMessage, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Webcam from "react-webcam";
@@ -145,20 +145,20 @@ const [verificationLocation, setVerificationLocation] = useState(null);
       if (!token) return;
 
       try {
-        const data = await AxiosGet("employee-details/");
-        if (data && data.profile) {
-          const profile = data.profile;
+        // FastAPI returns a flat profile (no nested `profile` object)
+        const profile = await FastAPIGet("employee-details");
+        if (profile) {
           setEmployeeData({
             id: `EMP${profile.user_id || '---'}`,
             name: `${profile.first_name} ${profile.last_name}`,
-            department: profile.department?.details || "N/A",
-            designation: profile.designation?.details || "N/A",
-            availableShifts: profile.shift ? [
+            department: profile.department_name || "N/A",
+            designation: profile.designation_name || "N/A",
+            availableShifts: profile.shift_id ? [
                {
-                 id: profile.shift.shift_id,
-                 name: profile.shift.shift_name,
-                 startTime: profile.shift.shift_start_time,
-                 endTime: profile.shift.shift_end_time
+                 id: profile.shift_id,
+                 name: profile.shift_name,
+                 startTime: profile.shift_start_time,
+                 endTime: profile.shift_end_time
                }
             ] : [],
             attendanceHistory: [],
@@ -293,7 +293,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
         try {
           const mobile = user?.mobile_number || localStorage.getItem("user_mobile");
           const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
-          const { data: faceData } = await AxiosPost("face/check-status/", { mobile_number: cleanMobile });
+          const faceData = await FastAPIPost("face/check-status", { mobile_number: cleanMobile });
           
           if (!faceData.is_face_registered) {
             setError("No face registered. Please register your face in the profile settings first.");
@@ -338,32 +338,31 @@ const [verificationLocation, setVerificationLocation] = useState(null);
       }
       
       const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
-      const res = await AxiosPost("face/verify/", {
+      const res = await FastAPIPost("face/verify", {
         mobile_number: cleanMobile,
         face_image_base64: imageSrc.split(',')[1] // Just the base64 part
       });
 
-      if (res.verified && res.confidence >= 90) {
-        await submitAttendance('inside', 'verified', false, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
+      if (res.verified && res.confidence >= 90 && res.face_token) {
+        await submitAttendance(res.face_token, false, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
       } else {
+        // Attendance is not recorded for a failed face match.
         setError(`Face verification failed (Confidence: ${res.confidence?.toFixed(1)}%). Please try again.`);
-        await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
+        setVerificationStep('face');
       }
     } catch (err) {
       console.error("Face verification error:", err);
-      const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || "Connection error";
-      setError(`Face verification failed: ${errorMsg}`);
-      await submitAttendance('inside', 'failed', true, verificationLocation.latitude, verificationLocation.longitude, verificationLocation.accuracy);
-
+      setError(`Face verification failed: ${apiErrorMessage(err, "Connection error")}`);
+      setVerificationStep('face');
     }
   };
 
-  const submitAttendance = async (locationStatus, faceStatus, stayOpen = false, latitude = null, longitude = null, accuracy = null) => {
+  const submitAttendance = async (faceToken, stayOpen = false, latitude = null, longitude = null, accuracy = null) => {
     try {
-      const res = await AxiosPost("mark-attendance/", {
+      const res = await FastAPIPost("attendance/mark", {
         action: "checkin",
-        location_status: locationStatus,
-        face_status: faceStatus,
+        // Server-issued proof of the face match from face/verify
+        face_token: faceToken,
         latitude: latitude,
         longitude: longitude,
         accuracy: accuracy
@@ -397,7 +396,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
         setTimeout(() => setIsVerifying(false), 2000);
       }
     } catch (err) {
-      setError("Failed to record: " + (err.response?.data?.detail || err.response?.data?.error || err.message));
+      setError("Failed to record: " + apiErrorMessage(err, "Unknown error"));
     } finally {
       if (!stayOpen) {
         // Only set to none if we're closing
@@ -413,7 +412,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
       // Send current GPS so the backend can flag check-outs away from the
       // office; check-out still works if location is unavailable.
       const coords = await getCurrentCoords();
-      await AxiosPost("mark-attendance/", { action: "checkout", ...(coords || {}) });
+      await FastAPIPost("attendance/mark", { action: "checkout", ...(coords || {}) });
       // Refresh local state instead of reload
       setActiveShifts(prev => {
         const next = { ...prev };
@@ -422,7 +421,7 @@ const [verificationLocation, setVerificationLocation] = useState(null);
       });
       toast({ title: "Shift Ended", description: "Your attendance has been recorded." });
     } catch (err) {
-      setError("Failed to end shift: " + (err.response?.data?.error || err.message));
+      setError("Failed to end shift: " + apiErrorMessage(err, "Unknown error"));
     }
   };
 

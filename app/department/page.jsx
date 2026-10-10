@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AxiosPost, AxiosGet, useAuth } from "@/context/AuthContext";
+import { FastAPI, FastAPIGet, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,6 @@ import { useToast } from "@/hooks/use-toast";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { Building2, MapPin, Pencil, Trash2 } from "lucide-react";
-
 export default function DepartmentPage() {
   const [formData, setFormData] = useState({
     org: { id: "", name: "" },
@@ -85,8 +84,7 @@ export default function DepartmentPage() {
         return false;
       }
 
-      // Use AxiosPost from AuthContext
-      await AxiosPost("token/verify/", { token });
+      await FastAPI.get("auth/verify");
       return true;
     } catch (error) {
       toast({
@@ -105,8 +103,9 @@ export default function DepartmentPage() {
     if (!(await verifyToken())) return;
 
     try {
-      const data = await AxiosGet("departments/");
-      setDepartments(data);
+      const response = await FastAPI.get("departments");
+      setDepartments(response.data);
+
     } catch (error) {
       toast({
         variant: "destructive",
@@ -121,7 +120,7 @@ export default function DepartmentPage() {
     if (!(await verifyToken())) return;
 
     try {
-      const data = await AxiosGet(`organisations/${orgId}/`);
+      const data = await FastAPIGet(`organisations/${orgId}`);
       setOrganizations([data]); // Assuming the response is a single organization object
 
       // Set the organization name in the formData state
@@ -139,36 +138,58 @@ export default function DepartmentPage() {
     }
   }, [orgId, toast, verifyToken]);
 
+
   const fetchLocations = useCallback(async () => {
     if (!(await verifyToken())) return;
 
     try {
-      const data = await AxiosGet("locations/");
+      const response = await FastAPI.get("locations");
+      const data = Array.isArray(response.data) ? response.data : [];
+
       setLocations(data);
+
       if (data.length > 0) {
         setFormData((prev) => ({
           ...prev,
           location: {
-            id: data[0].location_id.toString(),
+            id: String(data[0].location_id),
             name: data[0].location_name,
           },
         }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          location: { id: "", name: "" },
+        }));
       }
     } catch (error) {
+      console.error(
+        "Failed to fetch locations:",
+        error.response?.status,
+        error.response?.data || error.message
+      );
+
       toast({
         variant: "destructive",
         title: "Error",
         description:
-          error.response?.data?.detail || "Failed to fetch locations",
+          error.response?.data?.detail ||
+          error.response?.data?.error ||
+          error.message ||
+          "Failed to fetch locations",
       });
     }
   }, [toast, verifyToken]);
 
+
   const fetchLeaderboard = useCallback(async () => {
     if (!(await verifyToken())) return;
     try {
-      const data = await AxiosGet("departments/leaderboard/");
-      setLeaderboard(data);
+      const response = await FastAPI.get(
+        "departments/leaderboard"
+      );
+
+      setLeaderboard(response.data);
     } catch (error) {
       console.error("Failed to fetch leaderboard", error);
     }
@@ -177,7 +198,7 @@ export default function DepartmentPage() {
   const fetchShifts = useCallback(async () => {
     if (!(await verifyToken())) return;
     try {
-      const data = await AxiosGet("shifts/");
+      const data = await FastAPIGet("shifts");
       setAvailableShifts(data);
     } catch (error) {
       console.error("Failed to fetch shifts", error);
@@ -213,10 +234,9 @@ export default function DepartmentPage() {
 
     setIsLoading(true);
     try {
-      await AxiosPost("departments/add/", {
-        org: formData.org.id,
+      const response = await FastAPI.post("departments/add", {
         details: formData.details,
-        location: formData.location.id,
+        location: Number(formData.location.id),
       });
 
       toast({
@@ -251,9 +271,9 @@ export default function DepartmentPage() {
 
     setIsLoading(true);
     try {
-      await AxiosPost("bulk-assign/", {
+      await FastAPI.post("bulk-assign", {
         department_id: departmentId,
-        shift_id: selectedShiftId
+        shift_id: Number(selectedShiftId)
       });
       toast({ title: "Success", description: "Shift assigned to all department employees" });
       setSelectedShiftId("");
@@ -275,15 +295,12 @@ export default function DepartmentPage() {
 
     setIsLoading(true);
     try {
-      // Using AxiosPost with PUT method (you might want to add AxiosPut to your AuthContext)
-      await AxiosPost(
-        `departments/update/${editingDepartment.department_id}/`,
+      await FastAPI.put(
+        `departments/update/${editingDepartment.department_id}`,
         {
-          org_id: parseInt(editingDepartment.org.id),
           details: editingDepartment.details,
-          location_id: parseInt(editingDepartment.location.id),
-        },
-        "PUT"
+          location: Number(editingDepartment.location.id),
+        }
       ); // Add an optional third parameter to specify method
 
       toast({
@@ -309,8 +326,9 @@ export default function DepartmentPage() {
     if (!(await verifyToken())) return;
 
     try {
-      // Using AxiosPost with DELETE method (you might want to add AxiosDelete to your AuthContext)
-      await AxiosPost(`departments/delete/${departmentId}/`, {}, "DELETE");
+      await FastAPI.delete(
+        `departments/delete/${departmentId}`
+      );
 
       toast({
         title: "Success",
@@ -442,7 +460,7 @@ export default function DepartmentPage() {
                             <Building2 className="w-4 h-4" />
                             <span>
                               {organizations.find(
-                                (org) => orgId === dept.org.toString()
+                                (org) => String(orgId) === String(dept.org_id)
                               )?.name || "Unknown Organization"}
                             </span>
                           </div>
@@ -452,7 +470,7 @@ export default function DepartmentPage() {
                               {locations.find(
                                 (loc) =>
                                   loc.location_id.toString() ===
-                                  dept.location.toString()
+                                  dept.location_id.toString()
                               )?.location_name || "Unknown Location"}
                             </span>
                           </div>
@@ -494,8 +512,8 @@ export default function DepartmentPage() {
                               <DialogClose asChild>
                                 <Button variant="outline" className="text-foreground border-foreground/10 hover:bg-foreground/5">Cancel</Button>
                               </DialogClose>
-                              <Button 
-                                onClick={() => handleBulkAssignShift(dept.department_id)} 
+                              <Button
+                                onClick={() => handleBulkAssignShift(dept.department_id)}
                                 disabled={isLoading || !selectedShiftId}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                               >
@@ -514,17 +532,17 @@ export default function DepartmentPage() {
                                 setEditingDepartment({
                                   ...dept,
                                   org: {
-                                    id: dept.org.toString(),
+                                    id: dept.org_id.toString(),
                                     name: organizations.find(
-                                      (org) => orgId === dept.org.toString()
+                                      (org) => String(orgId) === String(dept.org_id)
                                     )?.name,
                                   },
                                   location: {
-                                    id: dept.location.toString(),
+                                    id: dept.location_id.toString(),
                                     name: locations.find(
                                       (loc) =>
                                         loc.location_id.toString() ===
-                                        dept.location.toString()
+                                        dept.location_id.toString()
                                     )?.location_name,
                                   },
                                 })
@@ -663,8 +681,8 @@ export default function DepartmentPage() {
               )}
             </div>
           </Card>
-        </div>
-      </div>
+        </div >
+      </div >
     </>
   );
 }

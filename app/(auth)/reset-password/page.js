@@ -16,23 +16,24 @@ import { Building, Loader2, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { AuthShell } from "@/components/AuthShell"
 import { useToast } from "@/hooks/use-toast"
-import { AxiosPost } from "@/context/AuthContext"
+import { FastAPIPost, apiErrorMessage } from "@/context/AuthContext"
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
   
-  const [email, setEmail] = useState("")
+  const [token, setToken] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
   useEffect(() => {
-    const emailParam = searchParams.get("email")
-    if (emailParam) {
-      setEmail(emailParam)
+    // The emailed link carries a signed, single-use token.
+    const tokenParam = searchParams.get("token")
+    if (tokenParam) {
+      setToken(tokenParam)
     }
   }, [searchParams])
 
@@ -48,12 +49,30 @@ function ResetPasswordForm() {
       return
     }
 
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "This reset link is invalid. Please request a new one.",
+      })
+      return
+    }
+
+    if (password.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Password must be at least 8 characters",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const data = await AxiosPost("reset-password/", { 
-        email, 
-        password 
+      await FastAPIPost("reset-password", {
+        token,
+        password
       })
 
       setIsSuccess(true)
@@ -69,7 +88,7 @@ function ResetPasswordForm() {
       
     } catch (error) {
       console.error("Reset password error:", error)
-      const errorMessage = error.response?.data?.error || "Failed to reset password. Please try again."
+      const errorMessage = apiErrorMessage(error, "Failed to reset password. Please try again.")
       toast({
         variant: "destructive",
         title: "Error",
@@ -114,7 +133,7 @@ function ResetPasswordForm() {
           </div>
           <CardTitle className="text-2xl text-center">Reset Password</CardTitle>
           <CardDescription className="text-center">
-            Set a new password for <span className="font-semibold text-primary">{email || "your account"}</span>
+            Set a new password for <span className="font-semibold text-primary">{"your account"}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
