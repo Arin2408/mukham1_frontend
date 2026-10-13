@@ -735,7 +735,7 @@ return (
                     <>
                       <UserPlus className="mr-2 h-4 w-4" />
                       Add Employee
-                    \</>
+                    </>
                   )}
                 </Button>
               </div>
@@ -897,7 +897,7 @@ return (
                     </Button>
                   </div>
                 )}
-              \</>
+              </>
             )}
           </Card>
         </div>
@@ -1014,6 +1014,6 @@ return (
           onClose={() => setSelectedEmployeeForCard(null)}
         />
       )}
-    \</>
+    </>
   );
 }

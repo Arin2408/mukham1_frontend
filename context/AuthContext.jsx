@@ -31,16 +31,24 @@ export const mediaUrl = (path) => {
   return `${API_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
+
 const attachAccessToken = (config) => {
   if (typeof window !== "undefined") {
+    const hasExplicitAuth =
+      config.headers?.Authorization ||
+      config.headers?.authorization;
+
     const token = localStorage.getItem("access_token");
-    if (token) {
+
+    if (token && !hasExplicitAuth) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
+
   return config;
 };
+
 
 FastAPI.interceptors.request.use(attachAccessToken, (error) =>
   Promise.reject(error)
@@ -226,68 +234,95 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginMember = async ({ mobile_number, password }) => {
-    setLoading(true);
-    try {
-      const formattedNumber = mobile_number.replace("+", "").trim();
-      const { data } = await FastAPI.post("member/login", {
-        mobile_number: formattedNumber,
-        password,
-      });
+  
+const loginMember = async ({
+  mobile_number,
+  session_id,
+  pre_auth_token,
+}) => {
+  setLoading(true);
 
-      if (data.access_token) {
-        localStorage.setItem("access_token", data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem("refresh_token", data.refresh_token);
-        }
-        // Drop any admin session left in this browser so admin-only pages
-        // do not reuse a stale org_id with the member token.
-        localStorage.removeItem("org_id");
-        if (data.user_id != null) localStorage.setItem("user_id", data.user_id);
-        localStorage.setItem("user_role", "employee");
-        localStorage.setItem("user_mobile", formattedNumber);
+  try {
+    const formattedNumber = mobile_number.replace(/\D/g, "").slice(-10);
 
-        const profile = data.profile || {};
-        const userName = profile.first_name
-          ? `${profile.first_name} ${profile.last_name || ""}`.trim()
-          : null;
-
-        setUser({
-          mobile_number: formattedNumber,
-          user_id: data.user_id,
-          role: "employee",
-          name: userName,
-          profile,
-        });
-
-        toast({
-          title: "Member Login successful",
-          description: `Welcome back, ${userName || "Member"}`,
-        });
-
-        return { success: true, is_registered: data.is_registered };
-      }
-
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: data.error || "Invalid credentials",
-      });
-      return { success: false };
-    } catch (err) {
-      console.error("Member login error:", err.response?.data || err.message);
-      const serverError = apiErrorMessage(err, "Invalid credentials");
-
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: serverError,
-      });
-      return { success: false, message: serverError };
-    } finally {
-      setLoading(false);
+    if (!session_id || !pre_auth_token) {
+      return {
+        success: false,
+        message: "Face verification session is missing. Please try again.",
+      };
     }
-  };
+
+    const { data } = await FastAPI.post(
+      "member/login/complete",
+      { session_id },
+      {
+        headers: {
+          Authorization: `Bearer ${pre_auth_token}`,
+        },
+      }
+    );
+
+    if (!data.access_token || !data.refresh_token) {
+      return {
+        success: false,
+        message: "Login could not be completed. Please try again.",
+      };
+    }
+
+    localStorage.setItem("access_token", data.access_token);
+    localStorage.setItem("refresh_token", data.refresh_token);
+    localStorage.removeItem("org_id");
+
+    if (data.user_id != null) {
+      localStorage.setItem("user_id", String(data.user_id));
+    }
+
+    localStorage.setItem("user_role", "employee");
+    localStorage.setItem("user_mobile", formattedNumber);
+
+    const profile = data.profile || {};
+    const userName = profile.first_name
+      ? `${profile.first_name} ${profile.last_name || ""}`.trim()
+      : null;
+
+    setUser({
+      mobile_number: formattedNumber,
+      user_id: data.user_id,
+      role: "employee",
+      name: userName,
+      profile,
+    });
+
+    toast({
+      title: "Member login successful",
+      description: `Welcome back, ${userName || "Member"}`,
+    });
+
+    return {
+      success: true,
+      is_registered: data.is_registered,
+    };
+  } catch (err) {
+    const serverError = apiErrorMessage(
+      err,
+      "Unable to complete member login."
+    );
+
+    toast({
+      variant: "destructive",
+      title: "Login failed",
+      description: serverError,
+    });
+
+    return {
+      success: false,
+      message: serverError,
+    };
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const registerUser = async ({ name, mobile_number, email }) => {
     try {
@@ -408,6 +443,13 @@ const AuthProvider = ({ children }) => {
   }, [loggedInCheck]);
 
   const logoutUser = async () => {
+    // Revoke this browser's refresh tokens on the server. Fire and forget:
+    // signing out locally must not wait on, or fail with, the network.
+    const storedRefresh = localStorage.getItem("refresh_token");
+    if (storedRefresh) {
+      FastAPI.post("auth/logout", { refresh: storedRefresh }).catch(() => {});
+    }
+
     clearSession();
 
     setUser(null);

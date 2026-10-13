@@ -4,10 +4,12 @@ const { spawn } = require("child_process");
 
 const frontendDir = path.resolve(__dirname, "..");
 const rootDir = path.resolve(frontendDir, "..");
-const backendDir = path.join(rootDir, "mukham_backend");
+const backendRepo = path.join(rootDir, "mukham_fastAPI");
+const backendDir = path.join(backendRepo, "fastapi_backend");
 
 const pythonCandidates = [
-  path.join(rootDir, ".venv", "Scripts", "python.exe"),
+  path.join(backendRepo, ".venv", "bin", "python"),
+  path.join(backendRepo, ".venv", "Scripts", "python.exe"),
   path.join(process.env.LOCALAPPDATA || "", "Programs", "Python", "Python310", "python.exe"),
   "python",
   "py",
@@ -63,5 +65,5 @@ process.on("SIGTERM", () => {
   process.exit();
 });
 
-start("backend", python, ["manage.py", "runserver", "8001"], backendDir);
+start("backend", python, ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8002"], backendDir);
 start("frontend", nextBin, ["dev"], frontendDir);
