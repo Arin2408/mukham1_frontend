@@ -21,33 +21,12 @@ import {
 import Link from "next/link"
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
-import { FastAPI, FastAPIGet } from "@/context/AuthContext";
+import { FastAPIGet } from "@/context/AuthContext";
 import { useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
-
-const attendanceData = [
-  { name: "Mon", attendance: 85 },
-  { name: "Tue", attendance: 90 },
-  { name: "Wed", attendance: 88 },
-  { name: "Thu", attendance: 92 },
-  { name: "Fri", attendance: 87 },
-]
-
-const shiftData = [
-  { name: "Week 1", employees: 150 },
-  { name: "Week 2", employees: 158 },
-  { name: "Week 3", employees: 165 },
-  { name: "Week 4", employees: 172 },
-]
-
-const roleDistribution = [
-  { name: "Managers", value: 20 },
-  { name: "Team Leads", value: 35 },
-  { name: "Developers", value: 85 },
-  { name: "Support", value: 40 },
-]
+import { format, parseISO } from "date-fns";
 
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))']
 
@@ -117,78 +96,32 @@ export default function DashboardPage() {
     if (!(await verifyToken())) return;
 
     try {
-      // 1. Fetch employees from FastAPI
-      const employeesResponse = await FastAPI.get("employees");
-
-      const employees = Array.isArray(employeesResponse.data)
-        ? employeesResponse.data
-        : [];
-
-      // 2. Fetch shifts from FastAPI
-      const shiftsResponse = await FastAPI.get("shifts");
-
-      const shifts = Array.isArray(shiftsResponse.data)
-        ? shiftsResponse.data
-        : [];
-
-      // 3. Fetch locations from FastAPI
-      const locationsResponse = await FastAPI.get("locations");
-
-      const locations = Array.isArray(locationsResponse.data)
-        ? locationsResponse.data
-        : [];
-
-      // 4. Department punctuality leaderboard
-      let leaderboard = [];
-
-      try {
-        const leaderboardResponse = await FastAPIGet(
-          "departments/leaderboard"
-        );
-
-        leaderboard = Array.isArray(leaderboardResponse)
-          ? leaderboardResponse
-          : [];
-      } catch (leaderboardError) {
-        console.error(
-          "Failed to fetch leaderboard:",
-          leaderboardError.response?.status,
-          leaderboardError.response?.data || leaderboardError.message
-        );
-      }
-
-      const avgRate =
-        leaderboard.length > 0
-          ? leaderboard.reduce(
-            (total, item) =>
-              total + (Number(item.punctuality_score) || 0),
-            0
-          ) / leaderboard.length
-          : 0;
+      // One call for the whole dashboard (also used by the mobile app).
+      const summary = await FastAPIGet("dashboard/summary");
 
       setDashboardStats({
-        totalEmployees: employees.length,
-        activeShifts: shifts.length,
-        activeLocations: locations.length,
-        attendanceRate: Math.round(avgRate),
+        totalEmployees: summary.total_employees,
+        activeShifts: summary.active_shifts,
+        activeLocations: summary.office_locations,
+        attendanceRate: summary.attendance_score,
       });
 
-      // Calculate role distribution from employee data
-      const distribution = {};
-
-      employees.forEach((employee) => {
-        const role = employee.designation_name || "Unassigned";
-        distribution[role] = (distribution[role] || 0) + 1;
-      });
-
-      const roleArray = Object.entries(distribution).map(
-        ([name, value]) => ({
-          name,
-          value,
-        })
+      // Most common designations first
+      setRoleStats(
+        summary.roles.slice(0, 4).map((role) => ({
+          name: role.name,
+          value: role.count,
+        }))
       );
 
-      setRoleStats(roleArray.slice(0, 4));
+      // Share of employees who checked in, for each of the last 7 days
+      setWeeklyAttendance(
+        summary.weekly_attendance.map((day) => ({
+          name: format(parseISO(day.date), "EEE"),
+          attendance: day.percent,
+          present: day.present,
+        }))
+      );
     } catch (error) {
       console.error(
         "Dashboard fetch error:",
@@ -314,7 +247,7 @@ export default function DashboardPage() {
               </div>
               <div className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={attendanceData}>
+                  <BarChart data={weeklyAttendance}>
                     <defs>
                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
@@ -331,6 +264,8 @@ export default function DashboardPage() {
                       dy={10}
                     />
                     <YAxis
+                      domain={[0, 100]}
+                      unit="%"
                       stroke="rgba(128,128,128,0.8)"
                       fontSize={11}
                       tickLine={false}
