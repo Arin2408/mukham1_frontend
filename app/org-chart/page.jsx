@@ -13,6 +13,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { departmentLabel } from "@/lib/setupLabels";
 import { FastAPI, apiErrorMessage, mediaUrl } from "@/context/AuthContext";
 import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
@@ -198,6 +199,7 @@ export default function OrgChartPage() {
 
   const [data, setData] = useState(null);
   const [departments, setDepartments] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState(new Set());
   const [query, setQuery] = useState("");
@@ -212,12 +214,14 @@ export default function OrgChartPage() {
       return;
     }
     try {
-      const [hierarchy, depts] = await Promise.all([
+      const [hierarchy, depts, offices] = await Promise.all([
         FastAPI.get("employee-hierarchy"),
         FastAPI.get("departments"),
+        FastAPI.get("locations"),
       ]);
       setData(hierarchy.data);
       setDepartments(Array.isArray(depts.data) ? depts.data : []);
+      setLocations(Array.isArray(offices.data) ? offices.data : []);
       return hierarchy.data;
     } catch (error) {
       toast({
@@ -425,7 +429,7 @@ export default function OrgChartPage() {
                 <SelectItem value="all">All departments</SelectItem>
                 {departments.map((d) => (
                   <SelectItem key={d.department_id} value={String(d.department_id)}>
-                    {d.details}
+                    {departmentLabel(d, locations)}
                   </SelectItem>
                 ))}
               </SelectContent>

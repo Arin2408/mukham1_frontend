@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { departmentLabel } from "@/lib/setupLabels";
 import { FastAPI, FastAPIGet, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export default function DesignationPage() {
   const [editingDesignation, setEditingDesignation] = useState(null);
   const [designations, setDesignations] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -96,11 +98,12 @@ export default function DesignationPage() {
 
     setIsLoading(true);
     try {
-      const [designationsResponse, departmentsResponse, employeesData] =
+      const [designationsResponse, departmentsResponse, employeesData, locationsResponse] =
         await Promise.all([
           FastAPI.get("designations"),
           FastAPI.get("departments"),
           FastAPIGet("employees"),
+          FastAPI.get("locations"),
         ]);
 
       console.log("DESIGNATIONS:", designationsResponse.data);
@@ -110,6 +113,7 @@ export default function DesignationPage() {
       const departmentsData = departmentsResponse.data;
       setDesignations(designationsData);
       setDepartments(departmentsData);
+      setLocations(Array.isArray(locationsResponse.data) ? locationsResponse.data : []);
       setEmployees(employeesData);
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Failed to fetch data" });
@@ -268,7 +272,7 @@ export default function DesignationPage() {
                     <SelectContent>
                       {departments.map((dept) => (
                         <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
-                          {dept.details}
+                          {departmentLabel(dept, locations)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -358,7 +362,7 @@ export default function DesignationPage() {
                                           <SelectContent>
                                             {departments.map((dept) => (
                                               <SelectItem key={dept.department_id} value={dept.department_id.toString()}>
-                                                {dept.details}
+                                                {departmentLabel(dept, locations)}
                                               </SelectItem>
                                             ))}
                                           </SelectContent>

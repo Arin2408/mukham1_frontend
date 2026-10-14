@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { departmentLabel } from "@/lib/setupLabels";
 import { FastAPI } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -113,6 +114,7 @@ export default function ShiftsPage() {
 
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [formData, setFormData] = useState({
@@ -178,9 +180,13 @@ export default function ShiftsPage() {
     if (!(await verifyToken())) return;
 
     try {
-      const response = await FastAPI.get("departments");
+      const [response, locationsResponse] = await Promise.all([
+        FastAPI.get("departments"),
+        FastAPI.get("locations"),
+      ]);
       const data = response.data;
       setDepartments(data);
+      setLocations(Array.isArray(locationsResponse.data) ? locationsResponse.data : []);
 
       if (data.length > 0) {
         setFormData(prev => ({
@@ -483,7 +489,7 @@ export default function ShiftsPage() {
                             key={department.department_id}
                             value={department.department_id.toString()}
                           >
-                            {department.details}
+                            {departmentLabel(department, locations)}
                           </SelectItem>
                         ))}
                       </SelectContent>

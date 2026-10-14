@@ -497,12 +497,12 @@ export default function DepartmentPage() {
                                   <SelectValue placeholder="Choose a Shift" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {availableShifts.filter(s => s.department === dept.department_id).map(shift => (
+                                  {availableShifts.filter(s => s.department_id === dept.department_id).map(shift => (
                                     <SelectItem key={shift.shift_id} value={shift.shift_id.toString()}>
                                       {shift.shift_name} ({shift.shift_start_time} - {shift.shift_end_time})
                                     </SelectItem>
                                   ))}
-                                  {availableShifts.filter(s => s.department === dept.department_id).length === 0 && (
+                                  {availableShifts.filter(s => s.department_id === dept.department_id).length === 0 && (
                                     <p className="text-center py-2 text-xs text-muted-foreground">No shifts defined for this department</p>
                                   )}
                                 </SelectContent>

@@ -2,6 +2,7 @@
 
 // Uses the shared FastAPI Axios client from AuthContext (base URL: /api/v1/).
 import { useState, useEffect, useCallback } from "react";
+import { departmentLabel, designationLabel, shiftLabel } from "@/lib/setupLabels";
 import { FastAPI, apiErrorMessage, useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -627,7 +628,7 @@ return (
                           key={dept.department_id}
                           value={dept.department_id.toString()}
                         >
-                          {dept.details}
+                          {departmentLabel(dept, locations)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -651,7 +652,7 @@ return (
                           key={desig.designation_id}
                           value={desig.designation_id.toString()}
                         >
-                          {desig.details}
+                          {designationLabel(desig, departments, locations)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -675,7 +676,7 @@ return (
                           key={shift.shift_id}
                           value={shift.shift_id.toString()}
                         >
-                          {shift.shift_name}
+                          {shiftLabel(shift, departments, locations)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -949,9 +950,9 @@ return (
                   />
                 </div>
                 {[
-                  ["department", "Department", departments, "department_id", (d) => d.details],
-                  ["designation", "Designation", designations, "designation_id", (d) => d.details],
-                  ["shift", "Shift", shifts, "shift_id", (s) => s.shift_name],
+                  ["department", "Department", departments, "department_id", (d) => departmentLabel(d, locations)],
+                  ["designation", "Designation", designations, "designation_id", (d) => designationLabel(d, departments, locations)],
+                  ["shift", "Shift", shifts, "shift_id", (s) => shiftLabel(s, departments, locations)],
                   ["office_location", "Office Location", locations, "location_id", (l) => l.location_name],
                 ].map(([field, label, options, idKey, getLabel]) => (
                   <div className="space-y-2" key={field}>
