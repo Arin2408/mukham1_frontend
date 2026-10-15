@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useThemeSwitch } from "@/hooks/use-theme-switch";
 import {
   ScanFace,
   MapPin,
@@ -22,19 +21,14 @@ const FEATURES = [
 // Shared split-screen layout for login / register / member / password pages.
 // Purely presentational: the page passes its own form as children.
 export function AuthShell({ children }) {
-  const [isMounted, setIsMounted] = useState(false);
-  const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => setIsMounted(true), []);
-
-  const isDark = !isMounted || resolvedTheme !== "light";
+  const { isDark, toggleTheme } = useThemeSwitch();
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden lg:grid lg:grid-cols-2">
       {/* Theme toggle */}
       <button
         type="button"
-        onClick={() => setTheme(isDark ? "light" : "dark")}
+        onClick={toggleTheme}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         title={isDark ? "Switch to light mode" : "Switch to dark mode"}
         className="absolute top-5 right-5 z-30 h-9 w-9 flex items-center justify-center rounded-full border border-border bg-card/80 backdrop-blur text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"

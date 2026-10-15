@@ -45,3 +45,6 @@ env/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lint cache
+.eslintcache

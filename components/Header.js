@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Search, Bell, User, LayoutDashboard, Settings, Building2, Users, Clock, Network, CalendarCheck } from "lucide-react"
+import { Search, Bell, User, LayoutDashboard, Settings, Building2, Users, Clock, Network, CalendarCheck, ScanFace } from "lucide-react"
 
 export function Header() {
   const [isEmbedded, setIsEmbedded] = useState(false)
@@ -53,10 +53,10 @@ export function Header() {
         {/* Left Side: Brand */}
         <div className="flex items-center gap-8">
           <Link href={isMember ? "/member" : "/dashboard"} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-              <Building2 className="h-5 w-5 text-white" />
+            <div className="w-8 h-8 brand-tile rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <ScanFace className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground tracking-tight">Mukham</span>
+            <span className="text-xl font-bold text-blue-500">Mukham</span>
           </Link>
         </div>
 

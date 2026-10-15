@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
+import { useThemeSwitch } from "@/hooks/use-theme-switch"
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -35,8 +35,7 @@ export function Sidebar() {
   const { user, logoutUser } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-  const { resolvedTheme, setTheme } = useTheme()
+  const { isDark, toggleTheme } = useThemeSwitch()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -50,7 +49,6 @@ export function Sidebar() {
 
   // Restore the collapsed preference
   useEffect(() => {
-    setIsMounted(true);
     try {
       setIsCollapsed(localStorage.getItem(COLLAPSED_STORAGE_KEY) === "true");
     } catch {}
@@ -78,8 +76,6 @@ export function Sidebar() {
     });
   };
 
-  const isDark = !isMounted || resolvedTheme !== "light";
-  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
   if (isEmbedded) return null;
 

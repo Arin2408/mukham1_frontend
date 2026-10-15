@@ -430,3 +430,19 @@ html .react-tel-input .country-list .divider {
   border-bottom-color: hsl(var(--border));
 }
 
+/* Theme switch: the old page stays still while the new one grows over it in a
+   circle (hooks/use-theme-switch.js runs the circle) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Browsers without view transitions: colours ease over instead */
+html.theme-fading,
+html.theme-fading *,
+html.theme-fading *::before,
+html.theme-fading *::after {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, fill 0.35s ease,
+    stroke 0.35s ease, box-shadow 0.35s ease !important;
+}
