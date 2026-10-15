@@ -76,7 +76,6 @@ export function Sidebar() {
     });
   };
 
-
   if (isEmbedded) return null;
 
   const isMember = pathname.startsWith('/member') || pathname.startsWith('/dashboard2');
