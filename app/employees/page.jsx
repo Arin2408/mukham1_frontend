@@ -220,8 +220,32 @@ export default function EmployeePage() {
   };
 
   const handleInputChange = (field, value) => {
+    if (field === "department") {
+      // A new department: its own designations and shifts only, and its
+      // office to start with (still changeable).
+      const department = departments.find((d) => String(d.department_id) === value);
+      setFormData((prev) => ({
+        ...prev,
+        department: value,
+        designation: designations.some(
+          (d) => String(d.designation_id) === prev.designation && String(d.department_id) === value
+        )
+          ? prev.designation
+          : "",
+        shift: shifts.some((s) => String(s.shift_id) === prev.shift && String(s.department_id) === value)
+          ? prev.shift
+          : "",
+        office_location: department?.location_id ? String(department.location_id) : prev.office_location,
+      }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+  // Designations and shifts of the chosen department.
+  const departmentDesignations = designations.filter(
+    (d) => String(d.department_id) === formData.department
+  );
+  const departmentShifts = shifts.filter((s) => String(s.department_id) === formData.department);
   const handleEditInputChange = (field, value) => {
     setEditingEmployee((prev) => ({ ...prev, [field]: value }));
   };
@@ -638,16 +662,25 @@ return (
                   <label className="text-sm font-medium">Designation</label>
                   <Select
                     required
+                    disabled={!formData.department}
                     value={formData.designation}
                     onValueChange={(value) =>
                       handleInputChange("designation", value)
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select designation" />
+                      <SelectValue
+                        placeholder={
+                          !formData.department
+                            ? "Select department first"
+                            : departmentDesignations.length
+                            ? "Select designation"
+                            : "No designations in this department"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {designations.map((desig) => (
+                      {departmentDesignations.map((desig) => (
                         <SelectItem
                           key={desig.designation_id}
                           value={desig.designation_id.toString()}
@@ -664,14 +697,23 @@ return (
                   <label className="text-sm font-medium">Shift</label>
                   <Select
                     required
+                    disabled={!formData.department}
                     value={formData.shift}
                     onValueChange={(value) => handleInputChange("shift", value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select shift" />
+                      <SelectValue
+                        placeholder={
+                          !formData.department
+                            ? "Select department first"
+                            : departmentShifts.length
+                            ? "Select shift"
+                            : "No shifts in this department"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {shifts.map((shift) => (
+                      {departmentShifts.map((shift) => (
                         <SelectItem
                           key={shift.shift_id}
                           value={shift.shift_id.toString()}

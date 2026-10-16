@@ -26,6 +26,8 @@ import { Header } from "@/components/Header";
 
 import { Sidebar } from "@/components/Sidebar";
 
+import ChangePasswordCard from "@/components/ChangePasswordCard";
+
 import {
 
   AlertDialog,
@@ -628,6 +630,8 @@ function ProfileContent() {
             </Card>
 
           </div>
+
+          <ChangePasswordCard className="mt-6" />
 
 
 

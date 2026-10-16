@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { FastAPI, FastAPIGet, useAuth } from "@/context/AuthContext";
+import { FastAPI, FastAPIGet, mediaUrl, useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import TaskCalendar from "@/components/TaskCalendar";
+import ChangePasswordCard from "@/components/ChangePasswordCard";
 import {
   BarChart,
   Bar,
@@ -107,6 +108,8 @@ export default function MemberPortal() {
   const [verificationDistance, setVerificationDistance] = useState(null);
   const [error, setError] = useState(null);
   const webcamRef = useRef(null);
+  // The profile photo failed to load: show initials instead.
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [employeeData, setEmployeeData] = useState({
     ...emptyEmployeeData,
     name: user?.name || emptyEmployeeData.name,
@@ -194,6 +197,8 @@ export default function MemberPortal() {
             id: `EMP${p.user_id || p.employee_id || p.id || "---"}`,
             name: [p.first_name, p.last_name].filter(Boolean).join(" ") || p.name || user?.name || "Employee",
             email: p.email || "N/A",
+            // The photo saved at the first face sign-in, if any.
+            photo: mediaUrl(p.photo),
             // The current FastAPI employee-details response uses these exact
             // flattened fields: department_name and designation_name.
             department:
@@ -1031,12 +1036,21 @@ export default function MemberPortal() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 animate-in fade-in duration-500">
             <Card className="quantanex-card p-8 flex flex-col items-center text-center">
               <div className="relative mb-6">
-                <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-bold text-foreground">
-                  {employeeData.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </div>
+                {employeeData.photo && !photoFailed ? (
+                  <img
+                    src={employeeData.photo}
+                    alt={employeeData.name}
+                    onError={() => setPhotoFailed(true)}
+                    className="w-24 h-24 rounded-full border-2 border-primary object-cover bg-primary/20"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-3xl font-bold text-foreground">
+                    {employeeData.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </div>
+                )}
                 <div className="absolute -bottom-1 -right-1 p-2 bg-green-500 rounded-full border-4 border-card">
                   <ShieldCheck className="h-4 w-4 text-white" />
                 </div>
@@ -1129,6 +1143,7 @@ export default function MemberPortal() {
                   </div>
                 </div>
               </Card>
+              <ChangePasswordCard />
             </div>
           </div>
         )}

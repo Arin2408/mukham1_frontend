@@ -252,22 +252,20 @@ export default function MapPage() {
   // SEARCH LOCATION
   // ---------------------------------------------------------
   const searchLocation = async () => {
-    if (!locationData.location_name.trim()) {
+    const query = locationData.location_name.trim();
+    if (!query) {
       return;
     }
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          locationData.location_name
-        )}`
-      );
-      const data = await response.json();
+      // Through our server (as the mobile app does), which searches
+      // OpenStreetMap for us; it needs at least 3 characters.
+      const { data } =
+        query.length >= 3
+          ? await FastAPI.get("geocode/search", { params: { q: query } })
+          : { data: [] };
       if (data && data[0]) {
-        const {
-          lat,
-          lon,
-        } = data[0];
+        const { latitude: lat, longitude: lon } = data[0];
         if (mapRef.current) {
           mapRef.current.setView(
             [lat, lon],

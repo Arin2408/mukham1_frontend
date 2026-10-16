@@ -126,9 +126,6 @@ export default function VerificationPage() {
               Save to Contacts
             </Button>
 
-            <p className="text-xs text-foreground/20 text-center">
-              Digital Signature: {Math.random().toString(36).substring(2, 15).toUpperCase()}
-            </p>
           </div>
         </Card>
       </div>
