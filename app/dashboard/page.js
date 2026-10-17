@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import SetupChecklist from "@/components/SetupChecklist"
 import { Building2, Clock, Users, Calendar, ArrowUpRight, ArrowDown, ArrowUp, UserPlus, MapPin } from "lucide-react"
 import { useState } from "react"
 import {
@@ -55,6 +56,7 @@ export default function DashboardPage() {
   const [roleStats, setRoleStats] = useState([]);
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [setup, setSetup] = useState(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -101,6 +103,7 @@ export default function DashboardPage() {
       // One call for the whole dashboard (also used by the mobile app).
       const summary = await FastAPIGet("dashboard/summary");
 
+      setSetup(summary.setup);
       setDashboardStats({
         totalEmployees: summary.total_employees,
         activeShifts: summary.active_shifts,
@@ -166,6 +169,8 @@ export default function DashboardPage() {
               <p className="text-muted-foreground text-sm">Organization health today. Secure tomorrow.</p>
             </div>
           </div>
+
+          <SetupChecklist setup={setup} />
 
           {/* Quick Stats with Sparklines and Color Accents */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

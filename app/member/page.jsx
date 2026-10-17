@@ -1,11 +1,16 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { FastAPI, FastAPIGet, mediaUrl, useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Webcam from "react-webcam";
+import dynamic from "next/dynamic";
+
+// The AWS liveness camera is large; load it only when a check-in starts.
+const FaceLivenessCheck = dynamic(() => import("@/components/FaceLivenessCheck"), {
+  ssr: false,
+});
 import {
   Dialog,
   DialogContent,
@@ -20,7 +25,6 @@ import {
   CheckCircle2,
   Timer,
   MapPin,
-  Camera,
   Loader2,
   ShieldCheck,
   Mail,
@@ -107,7 +111,6 @@ export default function MemberPortal() {
   const [verificationLocation, setVerificationLocation] = useState(null);
   const [verificationDistance, setVerificationDistance] = useState(null);
   const [error, setError] = useState(null);
-  const webcamRef = useRef(null);
   // The profile photo failed to load: show initials instead.
   const [photoFailed, setPhotoFailed] = useState(false);
   const [employeeData, setEmployeeData] = useState({
@@ -473,78 +476,6 @@ export default function MemberPortal() {
     );
   };
   // ---------------------------------------------------------
-  // CAPTURE FACE + VERIFY
-  // ---------------------------------------------------------
-  const captureAndVerify = async () => {
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (!imageSrc) {
-      setError(
-        "Failed to capture image. Please check camera permissions."
-      );
-      return;
-    }
-    if (!verificationLocation) {
-      setError(
-        "Location information is missing. Please restart the attendance process."
-      );
-      return;
-    }
-    setVerificationStep("submitting");
-    setError(null);
-    try {
-      const mobile =
-        user?.mobile_number ||
-        localStorage.getItem("user_mobile");
-      if (!mobile) {
-        setError(
-          "User mobile number not found. Please login again."
-        );
-        return;
-      }
-      const cleanMobile = mobile
-        .replace(/\D/g, "")
-        .slice(-10);
-      // -----------------------------------------------------
-      // FACE VERIFICATION
-      // -----------------------------------------------------
-      const response = await FastAPI.post("face/verify", {
-        mobile_number: cleanMobile,
-        face_image_base64: imageSrc.split(",")[1],
-      });
-      const res = response.data;
-      console.log("FACE VERIFICATION RESULT:", res);
-      // -----------------------------------------------------
-      // FACE VERIFIED
-      // -----------------------------------------------------
-      if (res?.verified && Number(res?.confidence) >= 90 && res?.face_token) {
-        await submitAttendance(
-          res.face_token,
-          verificationLocation.latitude,
-          verificationLocation.longitude,
-          verificationLocation.accuracy
-        );
-      } else {
-        // ---------------------------------------------------
-        // FACE FAILED -> show error, let the user retry.
-        // Attendance is NOT recorded.
-        // ---------------------------------------------------
-        const confidence = Number(res?.confidence);
-        setError(
-          `Face verification failed. Confidence: ${Number.isFinite(confidence) && res?.confidence != null
-            ? confidence.toFixed(1)
-            : "N/A"
-          }%`
-        );
-        setVerificationStep("face");
-      }
-    } catch (err) {
-      console.error("Face verification error:", err);
-      const errorMsg = getApiErrorMessage(err, "Connection error");
-      setError(`Face verification failed: ${errorMsg}`);
-      setVerificationStep("face");
-    }
-  };
-  // ---------------------------------------------------------
   // SUBMIT ATTENDANCE
   // ---------------------------------------------------------
   const submitAttendance = async (
@@ -558,7 +489,7 @@ export default function MemberPortal() {
       const response = await FastAPI.post("attendance/mark", {
         // Explicit check-in: a repeated request never checks the user out
         action: "checkin",
-        // Server-issued proof of the face match from face/verify
+        // Server-issued proof of a live face check (face/liveness/result)
         face_token: faceToken,
         latitude: latitude,
         longitude: longitude,
@@ -1195,22 +1126,20 @@ export default function MemberPortal() {
                     </span>
                   </div>
                 )}
-                <div className="relative rounded-2xl overflow-hidden border-2 border-foreground/10 bg-card aspect-video shadow-2xl">
-                  <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 border-[30px] border-black/40 rounded-full scale-110 pointer-events-none" />
-                </div>
-                <Button
-                  onClick={captureAndVerify}
-                  className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-xl shadow-primary/20"
-                >
-                  <Camera className="mr-2 h-4 w-4" />
-                  Authorize Session
-                </Button>
+                <FaceLivenessCheck
+                  mobileNumber={(user?.mobile_number || localStorage.getItem("user_mobile") || "")
+                    .replace(/\D/g, "")
+                    .slice(-10)}
+                  onVerified={(faceToken) => {
+                    setVerificationStep("submitting");
+                    submitAttendance(
+                      faceToken,
+                      verificationLocation?.latitude,
+                      verificationLocation?.longitude,
+                      verificationLocation?.accuracy
+                    );
+                  }}
+                />
               </div>
             )}
             {/* SUBMITTING */}

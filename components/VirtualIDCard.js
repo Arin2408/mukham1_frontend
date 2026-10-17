@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { mediaUrl } from '@/context/AuthContext';
+import { SITE_URL } from '@/lib/site';
 import { QrCode, Download, Printer, X, RotateCw, ScanFace, BadgeCheck, Building2, Briefcase, Hash } from 'lucide-react';
 
 const VirtualIDCard = ({ employee, onClose }) => {
@@ -12,8 +13,9 @@ const VirtualIDCard = ({ employee, onClose }) => {
   const handleFlip = () => setIsFlipped(!isFlipped);
 
   const fullName = `${employee.first_name} ${employee.last_name || ""}`;
-  // Generate QR Code Text (Instant Offline Verification)
-  const qrData = `MUKHAM VERIFIED EMPLOYEE\nName: ${fullName}\nID: #${employee.employee_id}\nMobile: ${employee.mobile_number}\nDept: ${employee.department_name}\nDesig: ${employee.designation_name}\nStatus: ACTIVE & VALIDATED`;
+  // The QR code opens the card's /verify page. Only the private card code
+  // goes in it (and to the QR image service), never the mobile number.
+  const qrData = `${SITE_URL}/verify/${employee.card_code}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
   const placeholderUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
   const photoUrl = mediaUrl(employee.photo) || placeholderUrl;

@@ -13,10 +13,11 @@ export default function VerificationPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Public endpoint: returns only the details printed on the ID card.
+    // Public: only a genuine card code (from the QR) works, and only the
+    // details printed on the card come back.
     const fetchEmployee = async () => {
       try {
-        const { data } = await FastAPI.get(`employees/${encodeURIComponent(id)}/card`);
+        const { data } = await FastAPI.get(`cards/${encodeURIComponent(id)}`);
         setEmployee(data);
       } catch (err) {
         console.error("Failed to fetch employee", err);
