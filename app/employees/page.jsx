@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import VirtualIDCard from "@/components/VirtualIDCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Sidebar } from "@/components/Sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -63,6 +64,7 @@ export default function EmployeePage() {
   const [shifts, setShifts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,6 +183,8 @@ export default function EmployeePage() {
           "Failed to fetch employees.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingEmployees(false);
     }
   }, [verifyToken, toast]);
   useEffect(() => {
@@ -797,10 +801,18 @@ return (
                 />
               </div>
             </div>
-            {employees.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No employees added yet
-              </p>
+            {isLoadingEmployees ? (
+              <div className="space-y-3 py-2" aria-busy="true" aria-label="Loading employees">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="text-center py-10 space-y-2">
+                <Users className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                <p className="font-medium text-foreground">No employees added yet</p>
+                <p className="text-sm text-muted-foreground">Use the add form above to add your first employee.</p>
+              </div>
             ) : (
               <>
                 <div className="overflow-x-auto">

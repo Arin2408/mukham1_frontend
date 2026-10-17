@@ -80,9 +80,14 @@ export default function AboutPage() {
             <p className="text-lg text-muted-foreground mb-8">
               Join thousands of organizations already using Mukham to manage their workforce effectively.
             </p>
-            <Link href="/register">
-              <Button size="lg">Try Mukham Now</Button>
-            </Link>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/register">
+                <Button size="lg">Try Mukham Now</Button>
+              </Link>
+              <Link href="/">
+                <Button size="lg" variant="outline">Back to Home</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -309,6 +309,16 @@
       transform: none;
       transition: none;
     }
+    /* Tailwind's built-in effects: pings, bounces and slide/fade/zoom-ins
+       (dialogs and menus too).
+       Loading spinners keep turning so people can still see work is happening. */
+    .animate-ping, .animate-bounce, .animate-in, .animate-out,
+    [class*=":animate-in"], [class*=":animate-out"] {
+      animation: none !important;
+    }
+    .transition, .transition-all, .transition-transform {
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* Calendar */

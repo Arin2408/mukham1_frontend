@@ -5,6 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Building2, Clock, Globe, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+
+// Tells search engines what Mukham is (schema.org), for richer results.
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/icon-512.png` },
+    {
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web, Android",
+    },
+  ],
+};
 
 // Fades its children in once they scroll into view
 function Reveal({ children, delay = 0 }) {
@@ -45,6 +62,10 @@ function Reveal({ children, delay = 0 }) {
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden relative flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       {/* Aurora Atmosphere */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="auth-blob absolute -top-32 left-[10%] w-[30rem] h-[30rem] rounded-full bg-blue-500/10 blur-3xl" />
@@ -136,6 +157,11 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-10 border-t border-foreground/5 relative">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
+          <nav className="mb-4 flex justify-center gap-6 text-sm text-muted-foreground">
+            <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+            <Link href="/register" className="hover:text-foreground transition-colors">Register</Link>
+            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
+          </nav>
           <p className="text-xs font-bold text-muted-foreground/40">
             © {new Date().getFullYear()} MUKHAM. All rights reserved.
           </p>

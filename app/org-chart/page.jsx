@@ -81,6 +81,11 @@ function Avatar({ employee }) {
       <img
         src={src}
         alt=""
+        // One photo per employee: only fetch the ones scrolled into view.
+        loading="lazy"
+        decoding="async"
+        width={36}
+        height={36}
         onError={() => setFailed(true)}
         className="h-9 w-9 shrink-0 rounded-full object-cover border border-foreground/10"
       />

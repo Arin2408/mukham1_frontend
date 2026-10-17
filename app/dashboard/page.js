@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Building2, Clock, Users, Calendar, ArrowUpRight, ArrowDown, ArrowUp, UserPlus, MapPin } from "lucide-react"
 import { useState } from "react"
 import {
@@ -53,6 +54,7 @@ export default function DashboardPage() {
   });
   const [roleStats, setRoleStats] = useState([]);
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -143,6 +145,8 @@ export default function DashboardPage() {
           "Unable to load dashboard data.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   }, [verifyToken, router, toast]);
 
@@ -179,7 +183,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline gap-1">
-                  <h3 className="text-3xl font-bold text-foreground">{stat.value}</h3>
+                  {isLoading ? (
+                    <Skeleton className="h-9 w-20" />
+                  ) : (
+                    <h3 className="text-3xl font-bold text-foreground">{stat.value}</h3>
+                  )}
                   <span className="text-xs text-muted-foreground">{stat.sub}</span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{stat.trend}</p>
@@ -218,7 +226,9 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3 mt-8">
-                {roleStats.length > 0 ? roleStats.map((role, index) => (
+                {isLoading ? (
+                  [0, 1, 2].map((i) => <Skeleton key={i} className="h-5 w-full" />)
+                ) : roleStats.length > 0 ? roleStats.map((role, index) => (
                   <div key={role.name} className="flex items-center justify-between group cursor-default">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
@@ -227,7 +237,7 @@ export default function DashboardPage() {
                     <span className="text-sm font-medium text-foreground">{role.value} ({(role.value / dashboardStats.totalEmployees * 100).toFixed(0)}%)</span>
                   </div>
                 )) : (
-                  <p className="text-xs text-muted-foreground text-center">No data found</p>
+                  <p className="text-xs text-muted-foreground text-center">No designations yet. Add designations and employees to see the breakdown.</p>
                 )}
               </div>
             </Card>
