@@ -48,3 +48,7 @@ next-env.d.ts
 
 # lint cache
 .eslintcache
+
+# Stray logs and Claude Code local settings
+*.log
+.claude/

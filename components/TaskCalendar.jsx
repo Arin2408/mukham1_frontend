@@ -127,9 +127,19 @@ const emptyForm = (date) => ({
  *   mode="admin":  all organisation tasks, assign / edit / delete.
  *   mode="member": the logged-in employee's own tasks; they can start and
  *                  complete them.
+ *   mode="team":   a manager's direct reports' tasks (employees = the team,
+ *                  userId = the manager); they assign tasks to the team and
+ *                  manage the ones they assigned.
  */
-export default function TaskCalendar({ mode = "admin", employees = [] }) {
+export default function TaskCalendar({ mode = "admin", employees = [], userId = null }) {
   const isAdmin = mode === "admin";
+  const isTeam = mode === "team";
+  // Admin and manager views list several people's tasks and assign new ones.
+  const showsPeople = isAdmin || isTeam;
+  // Admin: every task. Manager: only the ones they assigned.
+  const canManage = (task) => isAdmin || (isTeam && task.created_by_id === userId);
+  // Status: the assignee (member view), the admin, or whoever assigned it.
+  const canChangeStatus = (task) => mode === "member" || canManage(task);
   const { toast } = useToast();
 
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -165,7 +175,8 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
         from: format(gridStart, ISO),
         to: format(gridEnd, ISO),
       });
-      if (isAdmin && employeeFilter !== "all") params.set("employee_id", employeeFilter);
+      if (isTeam) params.set("scope", "team");
+      if (showsPeople && employeeFilter !== "all") params.set("employee_id", employeeFilter);
       if (statusFilter !== "all") params.set("status", statusFilter);
       const { data } = await FastAPI.get(`tasks?${params}`);
       setTasks(Array.isArray(data) ? data : []);
@@ -179,7 +190,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, employeeFilter, statusFilter, isAdmin, toast]);
+  }, [month, employeeFilter, statusFilter, showsPeople, isTeam, toast]);
 
   useEffect(() => {
     load();
@@ -397,7 +408,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
               Today
             </Button>
             <div className="flex flex-wrap gap-2 sm:ml-auto w-full sm:w-auto">
-              {isAdmin && (
+              {showsPeople && (
                 <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
                   <SelectTrigger className="w-full sm:w-44" aria-label="Filter by employee">
                     <SelectValue placeholder="All employees" />
@@ -423,7 +434,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
                   ))}
                 </SelectContent>
               </Select>
-              {isAdmin && (
+              {showsPeople && (
                 <Button onClick={openCreate} className="w-full sm:w-auto">
                   <CalendarPlus className="mr-2 h-4 w-4" />
                   Assign task
@@ -536,7 +547,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
                           <span className="block text-sm font-medium truncate">{task.title}</span>
                           <span className="block text-xs opacity-80 truncate">
                             {EVENT[type].label}
-                            {isAdmin ? ` · ${task.employee_name}` : ""}
+                            {showsPeople ? ` · ${task.employee_name}` : ""}
                           </span>
                         </span>
                       </button>
@@ -567,7 +578,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm text-foreground truncate">{task.title}</span>
-                        {isAdmin && (
+                        {showsPeople && (
                           <span className="block text-xs text-muted-foreground truncate">{task.employee_name}</span>
                         )}
                       </span>
@@ -591,7 +602,8 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
               <DialogHeader>
                 <DialogTitle className="pr-6">{openTask.title}</DialogTitle>
                 <DialogDescription>
-                  {isAdmin ? `${openTask.employee_name}${openTask.department_name ? ` · ${openTask.department_name}` : ""}` : "Assigned to you"}
+                  {showsPeople ? `${openTask.employee_name}${openTask.department_name ? ` · ${openTask.department_name}` : ""}` : "Assigned to you"}
+                  {openTask.assigned_by_name ? ` · Assigned by ${openTask.assigned_by_name}` : ""}
                 </DialogDescription>
               </DialogHeader>
 
@@ -645,7 +657,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
                 </div>
               </dl>
 
-              {openTask.status !== "completed" && (
+              {openTask.status !== "completed" && canChangeStatus(openTask) && (
                 <div className="flex flex-wrap items-end gap-2 rounded-lg border border-foreground/10 p-3">
                   <div className="space-y-1">
                     <label htmlFor="completed-on" className="text-xs text-muted-foreground">Completed on</label>
@@ -673,13 +685,13 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
               )}
 
               <DialogFooter className="gap-2 sm:gap-2">
-                {openTask.status === "completed" && (
+                {openTask.status === "completed" && canChangeStatus(openTask) && (
                   <Button variant="outline" onClick={() => changeStatus(openTask, "in_progress")} disabled={isSaving}>
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Reopen
                   </Button>
                 )}
-                {isAdmin && (
+                {canManage(openTask) && (
                   <>
                     <Button variant="outline" onClick={() => { setOpenTask(null); openEdit(openTask); }}>
                       <Pencil className="mr-2 h-4 w-4" />
@@ -697,7 +709,7 @@ export default function TaskCalendar({ mode = "admin", employees = [] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Create / edit (admin) */}
+      {/* Create / edit (admin, or a manager for their team) */}
       <Dialog open={Boolean(form)} onOpenChange={(open) => !open && setForm(null)}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {form && (

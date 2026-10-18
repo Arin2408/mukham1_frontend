@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import TaskCalendar from "@/components/TaskCalendar";
+import TeamTasks from "@/components/TeamTasks";
 import ChangePasswordCard from "@/components/ChangePasswordCard";
 import {
   BarChart,
@@ -102,6 +103,9 @@ export default function MemberPortal() {
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "dashboard";
+  // Managers (someone reports to them) switch between their own tasks and
+  // their team's.
+  const [taskScope, setTaskScope] = useState("mine");
   const [currentTime, setCurrentTime] = useState(null);
   const [selectedShift, setSelectedShift] = useState(null);
   const [activeShifts, setActiveShifts] = useState({});
@@ -198,6 +202,8 @@ export default function MemberPortal() {
           );
           setEmployeeData({
             id: `EMP${p.user_id || p.employee_id || p.id || "---"}`,
+            userId: p.user_id,
+            teamSize: p.team_size || 0,
             name: [p.first_name, p.last_name].filter(Boolean).join(" ") || p.name || user?.name || "Employee",
             email: p.email || "N/A",
             // The photo saved at the first face sign-in, if any.
@@ -651,7 +657,34 @@ export default function MemberPortal() {
         </div>
         {/* TASKS */}
         {activeTab === "tasks" ? (
-          <TaskCalendar mode="member" />
+          <div className="space-y-6">
+            {employeeData.teamSize > 0 && (
+              <div role="tablist" aria-label="Whose tasks" className="inline-flex rounded-lg border border-foreground/10 p-1 bg-foreground/5">
+                {[
+                  ["mine", "My tasks"],
+                  ["team", `My team (${employeeData.teamSize})`],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={taskScope === value}
+                    onClick={() => setTaskScope(value)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      taskScope === value ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {employeeData.teamSize > 0 && taskScope === "team" ? (
+              <TeamTasks userId={employeeData.userId} />
+            ) : (
+              <TaskCalendar mode="member" />
+            )}
+          </div>
         ) : /* DASHBOARD */ activeTab === "dashboard" ? (
           <div className="space-y-10 animate-in fade-in duration-500">
             {/* STATUS GRID */}
