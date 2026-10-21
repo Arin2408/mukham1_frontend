@@ -58,6 +58,25 @@ import { jwtDecode } from "jwt-decode"
 
 const HISTORY_DAYS = 30
 
+// "30 min" or "1 h 15 min"
+function formatMinutes(minutes) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (!h) return `${m} min`
+  return m ? `${h} h ${m} min` : `${h} h`
+}
+
+// Each time out of the office area: "Out 02:10 PM – 02:40 PM", or "Out since …" while still out.
+function awayPeriods(moves = []) {
+  const periods = []
+  for (const move of moves) {
+    if (move.event === "exit") periods.push({ from: move.at, to: null })
+    else if (periods.length && periods[periods.length - 1].to === null) periods[periods.length - 1].to = move.at
+  }
+  const time = (iso) => format(new Date(iso), "hh:mm a")
+  return periods.map((p) => (p.to ? `Out ${time(p.from)} – ${time(p.to)}` : `Out since ${time(p.from)}`))
+}
+
 export default function AttendancePage() {
 
   const router = useRouter()
@@ -502,6 +521,14 @@ export default function AttendancePage() {
         checkOutLocation: log.check_out_location_status,
 
         checkOutDistance: log.check_out_distance,
+
+        // Leaving the office area while checked in (phone geofence)
+
+        trackingOff: log.presence_tracking === "off",
+
+        minutesOutside: log.time_outside_minutes || 0,
+
+        awayPeriods: awayPeriods(log.presence_events),
 
       })
 
@@ -1003,6 +1030,26 @@ export default function AttendancePage() {
 
                                               )}
 
+                                            {log.minutesOutside > 0 && (
+
+                                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+
+                                                Outside {formatMinutes(log.minutesOutside)}
+
+                                              </span>
+
+                                            )}
+
+                                            {log.trackingOff && (
+
+                                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+
+                                                Tracking off
+
+                                              </span>
+
+                                            )}
+
                                             {log.checkOutLocation ===
 
                                               "unknown" && (
@@ -1016,6 +1063,16 @@ export default function AttendancePage() {
                                               )}
 
                                           </div>
+
+                                          {log.awayPeriods.map((period) => (
+
+                                            <p key={period} className="mt-1 text-[10px] text-muted-foreground">
+
+                                              {period}
+
+                                            </p>
+
+                                          ))}
 
                                         </TableCell>
 

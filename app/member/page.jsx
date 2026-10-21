@@ -111,6 +111,8 @@ export default function MemberPortal() {
   const [activeShifts, setActiveShifts] = useState({});
   const [completedShifts, setCompletedShifts] = useState([]);
   const [isVerifying, setIsVerifying] = useState(false);
+  // The shift being ended while its check-out face check is open.
+  const [checkoutFor, setCheckoutFor] = useState(null);
   const [verificationStep, setVerificationStep] = useState("none");
   const [verificationLocation, setVerificationLocation] = useState(null);
   const [verificationDistance, setVerificationDistance] = useState(null);
@@ -562,7 +564,14 @@ export default function MemberPortal() {
   // ---------------------------------------------------------
   // END SHIFT
   // ---------------------------------------------------------
-  const handleEndShift = async (id) => {
+  // The signed-in employee's 10-digit mobile number, for the face check.
+  const ownMobile = () =>
+    (user?.mobile_number || localStorage.getItem("user_mobile") || "")
+      .replace(/\D/g, "")
+      .slice(-10);
+  // Check-out needs a live face check too: the person leaving is the one
+  // who came in. faceToken comes from FaceLivenessCheck.
+  const handleEndShift = async (id, faceToken) => {
     try {
       const s = activeShifts[id];
       if (!s) {
@@ -575,6 +584,7 @@ export default function MemberPortal() {
       // Tell backend this is a check-out (never a new check-in)
       await FastAPI.post("attendance/mark", {
         action: "checkout",
+        face_token: faceToken,
         ...(coords ? { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy } : {}),
       });
       setActiveShifts((prev) => {
@@ -840,9 +850,7 @@ export default function MemberPortal() {
                         </div>
                         <Button
                           variant="destructive"
-                          onClick={() =>
-                            handleEndShift(id)
-                          }
+                          onClick={() => setCheckoutFor(id)}
                           className="mt-4 sm:mt-0 bg-red-600 hover:bg-red-700 text-white px-8 h-12 font-bold text-xs shadow-lg shadow-red-900/20 border-none"
                         >
                           End Session
@@ -1160,9 +1168,7 @@ export default function MemberPortal() {
                   </div>
                 )}
                 <FaceLivenessCheck
-                  mobileNumber={(user?.mobile_number || localStorage.getItem("user_mobile") || "")
-                    .replace(/\D/g, "")
-                    .slice(-10)}
+                  mobileNumber={ownMobile()}
                   onVerified={(faceToken) => {
                     setVerificationStep("submitting");
                     submitAttendance(
@@ -1223,6 +1229,38 @@ export default function MemberPortal() {
                 </Button>
               </div>
             ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* =====================================================
+          CHECK-OUT FACE CHECK
+      ===================================================== */}
+      <Dialog
+        open={checkoutFor !== null}
+        onOpenChange={(open) => {
+          if (!open) setCheckoutFor(null);
+        }}
+      >
+        <DialogContent className="bg-card border-foreground/10 text-foreground max-w-md rounded-2xl overflow-hidden p-0">
+          <DialogHeader className="p-6 border-b border-foreground/5 bg-foreground/[0.02]">
+            <DialogTitle className="text-xl font-bold text-center tracking-tight">
+              Face check to end session
+            </DialogTitle>
+            <DialogDescription className="text-center text-muted-foreground">
+              Look at the camera to check out.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-8">
+            {checkoutFor !== null && (
+              <FaceLivenessCheck
+                mobileNumber={ownMobile()}
+                onVerified={(faceToken) => {
+                  const id = checkoutFor;
+                  setCheckoutFor(null);
+                  handleEndShift(id, faceToken);
+                }}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

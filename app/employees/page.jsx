@@ -413,6 +413,31 @@ export default function EmployeePage() {
       });
     }
   };
+  // The phone an employee checks in from: approve a new phone that is
+  // waiting, or reset so their next check-in from the app registers one.
+  const handlePhone = async (id, kind) => {
+    if (!(await verifyToken())) return;
+    try {
+      if (kind === "approve") {
+        await FastAPI.post(`employees/${id}/phone/approve`);
+      } else {
+        await FastAPI.delete(`employees/${id}/phone`);
+      }
+      toast({
+        title: "Success",
+        description: kind === "approve" ? "New phone approved" : "Phone reset",
+      });
+      fetchEmployees();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update the phone",
+      });
+    }
+  };
+  // The server sends phone_status only while the phone lock is on.
+  const showPhone = employees.some((employee) => employee.phone_status);
   const exportToCSV = (data) => {
     const headers = [
       "First Name",
@@ -827,6 +852,7 @@ return (
                         <th className="py-3 px-3 text-left">Shift</th>
                         <th className="py-3 px-3 text-left">Location</th>
                         <th className="py-3 px-3 text-left">Reports to</th>
+                        {showPhone && <th className="py-3 px-3 text-left">Phone</th>}
                         <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -858,6 +884,62 @@ return (
                           <td className="py-3 px-3 text-foreground/60 whitespace-nowrap">
                             {employee.manager_name || "Organisation"}
                           </td>
+                          {showPhone && (
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {employee.phone_status === "pending" ? (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs border border-amber-500/20"
+                                  title="They tried to check in from a phone that is not registered"
+                                >
+                                  New phone waiting
+                                </span>
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => handlePhone(employee.employee_id, "approve")}
+                                >
+                                  Approve
+                                </Button>
+                              </div>
+                            ) : employee.phone_status === "registered" ? (
+                              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs border border-green-500/20">
+                                Registered
+                              </span>
+                            ) : (
+                              <span
+                                className="text-xs text-foreground/50"
+                                title="Their next check-in from the app registers their phone"
+                              >
+                                Not yet
+                              </span>
+                            )}
+                            {employee.phone_status && employee.phone_status !== "none" && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="link" size="sm" className="h-7 px-2 text-xs text-foreground/60">
+                                    Reset
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-card border-foreground/10 text-foreground">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Reset phone</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-foreground/60">
+                                      The next check-in by {employee.first_name} {employee.last_name} from
+                                      the app will register that phone. Do this when they change phones.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="bg-transparent border-foreground/10 text-foreground hover:bg-foreground/5">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handlePhone(employee.employee_id, "reset")}>
+                                      Reset phone
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </td>
+                          )}
                           <td className="py-3 px-3 text-right">
                             <div className="flex justify-end gap-1">
                               <Button
