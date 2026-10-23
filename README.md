@@ -11,8 +11,12 @@ mobile app (`../mukham_mobile`) uses the same backend.
 
 | Role | Sign-in | What they do |
 | --- | --- | --- |
-| Organisation admin | `/login` (mobile number and password) | Dashboard, employees, departments, designations, shifts, office locations, tasks, org chart, attendance (including manual check-in and check-out) |
-| Employee | `/member-login` (mobile number, password and live face check) | Check in and out with GPS and the face check, attendance history, tasks, profile and ID card |
+| Organisation admin | `/login` (mobile number and password) | Dashboard, employees, departments, designations, shifts, office locations, tasks, org chart, attendance (including manual check-in and check-out, and time spent outside the office from the mobile app's tracking) |
+| Employee | `/member-login` (mobile number, password and live face check) | Check in with GPS and the face check, check out with the face check, attendance history, tasks, profile and ID card |
+
+When the backend's phone lock is on (`PHONE_LOCK_ENABLED`), the Employees
+page shows each employee's check-in phone, with Approve (a new phone) and
+Reset. Check-in from the website is not tied to a phone.
 
 A new organisation registers at `/register`. Anyone can open `/verify/<id>`,
 the page an ID card's QR code opens.
@@ -77,6 +81,14 @@ docker run -p 3000:3000 mukham-web
 
 Next.js 13 (App Router), React 18, Tailwind CSS with shadcn/ui, Axios,
 Recharts, Leaflet maps, and AWS Amplify's Face Liveness component.
+
+## Hosting
+
+Vercel, at https://mukham1-frontend.vercel.app. Every push to `main`
+deploys. The three `NEXT_PUBLIC_*` settings are set in Vercel's project
+settings (Environment Variables), with `NEXT_PUBLIC_FASTAPI_URL` pointing
+at https://mukham-fastapi.onrender.com/api/v1/. The website's address must
+be in the backend's `CORS_ALLOWED_ORIGINS`.
 
 ## Sibling repositories
 
